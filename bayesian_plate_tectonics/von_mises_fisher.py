@@ -119,30 +119,3 @@ class VonMisesFisher(Continuous):
             return theano.tensor.log( -kappa / ( 2.*np.pi * theano.tensor.expm1(-2.*kappa)) ) + \
                    kappa * (theano.tensor.dot(point,mu)-1.)
 
-if __name__ == '__main__':
-    import cartopy.crs as ccrs
-    import pymc3
-    import matplotlib.pyplot as plt
-    mu_colat = 110.
-    mu_lon = 20.
-    mu = np.array([np.sin(mu_colat*d2r)*np.cos(mu_lon*d2r),\
-                   np.sin(mu_colat*d2r)*np.sin(mu_lon*d2r),\
-                   np.cos(mu_colat*d2r)])
-    kappa = 0.0
-
-    
-    with pymc3.Model():
-        vmf = VonMisesFisher('vmf', mu=mu, kappa=kappa)
-        samples = vmf.random(size=1000)
-        x = samples[:,0]
-        y = samples[:,1]
-        z = samples[:,2]
-        r = np.sqrt(x*x+y*y+z*z)
-        theta = 90.-np.arccos(z/r)*r2d
-        phi = np.arctan2(y,x)*r2d
-
-        ax = plt.axes(projection = ccrs.Orthographic(30.,30.))
-        ax.scatter(phi, theta, transform=ccrs.PlateCarree())
-        ax.gridlines()
-        ax.set_global()
-        plt.show()
