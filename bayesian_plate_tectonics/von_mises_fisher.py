@@ -3,8 +3,10 @@ import scipy.stats as st
 
 from pymc3.distributions import Continuous
 from pymc3.distributions.distribution import draw_values, generate_samples
+from pymc3.distributions.dist_math import bound
 
 import theano.tensor
+import theano
 
 d2r = np.pi/180.
 r2d = 180./np.pi
@@ -45,50 +47,32 @@ class VonMisesFisher(Continuous):
         spread of the distribution.
     """
 
-    def __init__(self, mu, kappa, *args, **kwargs):
-        super(VonMisesFisher, self).__init__(shape=3, *args, **kwargs)
-#        print mu
-#        assert(mu.shape == (3,))
+    def __init__(self, lon_colat, kappa, *args, **kwargs):
+        super(VonMisesFisher, self).__init__(shape=2, *args, **kwargs)
+
         assert(theano.tensor.ge(kappa,0.))
-        assert(theano.tensor.le(abs(theano.tensor.sqrt(mu[0]*mu[0]+mu[1]*mu[1]+mu[2]*mu[2]) - 1.), 1.e-8))
-        self.mu = mu
-        self.median = self.mode = self.mean = self.mu
+
+        lon = lon_colat[0]*d2r
+        colat = lon_colat[1]*d2r
+        self.lon_colat = lon_colat
+        self.mu = [ theano.tensor.sin(colat) * theano.tensor.cos(lon),
+                    theano.tensor.sin(colat) * theano.tensor.sin(lon),
+                    theano.tensor.cos(colat) ]
         self.kappa = kappa
-#        self.normalization = kappa / 4. / np.pi / np.sinh(kappa)
-
-    def _pdf(point, mu, kappa):
-        """
-        Probability density function for Von Mises-Fisher
-        distribution.
-
-        This uses a numerically more stable implementation
-        for tight concentrations.
-        """
-        if kappa < eps:
-            return 1./4./np.pi
-        else:
-            return -kappa / ( 2. * np.pi * np.expm1(-2.*kappa) ) * \
-                   np.exp( kappa * np.dot(point, mu) )
-        #return self.normalization * \
-        #       np.exp( self.kappa * np.dot(point, mu) )
+        self.median = self.mode = self.mean = lon_colat
 
     def random(self, point=None, size=None):
-        mu, kappa = draw_values([self.mu, self.kappa], point=point)
-
+        lon_colat, kappa = draw_values([self.lon_colat, self.kappa], point=point)
         # make the appropriate euler rotation matrix
-        alpha = 0. # rotationally symmetric distribution, so this does not matter
-        beta = np.arccos(mu[2]) #unit vector, norm is one
-        gamma = np.arctan2(mu[1], mu[0])
-        rotation_matrix = construct_euler_rotation_matrix(alpha, beta, gamma)
+        rotation_matrix = construct_euler_rotation_matrix(0., lon_colat[1]*d2r, lon_colat[0]*d2r)
 
-        def sample_generator(size=None):
+        def cartesian_sample_generator(size=None):
             # Generate samples around the z-axis, then rotate
             # to the appropriate position using euler angles
 
             # z-coordinate is determined by inversion of the cumulative
             # distribution function for that coordinate.
             zeta = st.uniform.rvs(loc=0., scale=1., size=size)
-            #z = 1./kappa * np.log(np.exp(-kappa) + 2.*zeta*np.sinh(kappa))
             if kappa < eps:
                 z = 2.*zeta-1.
             else:
@@ -105,17 +89,25 @@ class VonMisesFisher(Continuous):
             samples = np.transpose(np.dot(rotation_matrix, unrotated_samples))
             return samples
             
-        samples = sample_generator(size) 
-        return samples
+        cartesian_samples = cartesian_sample_generator(size) 
+        colat_samples = np.fromiter( (np.arccos( s[2]/np.sqrt(np.dot(s,s)) ) for s in cartesian_samples), dtype=np.float64, count=size)
+        lon_samples = np.fromiter( (np.arctan2( s[1], s[0] ) for s in cartesian_samples), dtype=np.float64, count=size)
+        return np.transpose(np.vstack((lon_samples, colat_samples)))*r2d
 
-    def logp(self, point):
-        #return theano.tensor.log(self.normalization) + self.kappa * theano.tensor.dot(point, self.mu)
+    def logp(self, lon_colat):
         kappa = self.kappa
         mu = self.mu
+        lon_colat_r = theano.tensor.reshape( lon_colat*d2r, (-1, 2) )
+        point = [ theano.tensor.sin(lon_colat_r[:,1]) * theano.tensor.cos(lon_colat_r[:,0]),
+                  theano.tensor.sin(lon_colat_r[:,1]) * theano.tensor.sin(lon_colat_r[:,0]),
+                  theano.tensor.cos(lon_colat_r[:,1]) ]
+        point = theano.tensor.as_tensor_variable(point).T
 
-        if theano.tensor.le(kappa, eps):
-            return theano.tensor.log( 1./4./np.pi )
-        else:
-            return theano.tensor.log( -kappa / ( 2.*np.pi * theano.tensor.expm1(-2.*kappa)) ) + \
-                   kappa * (theano.tensor.dot(point,mu)-1.)
-
+        return bound( theano.tensor.switch( theano.tensor.ge(kappa, eps), \
+                                             # Kappa greater than zero
+                                             theano.tensor.log( -kappa / ( 2.*np.pi * theano.tensor.expm1(-2.*kappa)) ) + \
+                                             kappa * (theano.tensor.dot(point,mu)-1.),
+                                             # Kappa equals zero
+                                             theano.tensor.log(1./4./np.pi)),
+                      theano.tensor.all( lon_colat_r[:,1] >= 0. ),
+                      theano.tensor.all( lon_colat_r[:,1] <= np.pi ) )

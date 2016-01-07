@@ -8,25 +8,19 @@ import bayesian_plate_tectonics as bpt
 d2r = np.pi/180.
 r2d = 180./np.pi
 
-mu_colat = 110.
-mu_lon = 20.
-mu = np.array([np.sin(mu_colat*d2r)*np.cos(mu_lon*d2r),\
-	       np.sin(mu_colat*d2r)*np.sin(mu_lon*d2r),\
-	       np.cos(mu_colat*d2r)])
+mu_colat = 60.
+mu_lon =30.
 kappa = 50.0
 
 
 with pymc3.Model():
-    vmf = bpt.VonMisesFisher('vmf', mu=mu, kappa=kappa)
-    samples = vmf.random(size=1000)
-    x = samples[:,0]
-    y = samples[:,1]
-    z = samples[:,2]
-    r = np.sqrt(x*x+y*y+z*z)
-    theta = 90.-np.arccos(z/r)*r2d
-    phi = np.arctan2(y,x)*r2d
+    vmf = bpt.VonMisesFisher('vmf', lon_colat=(mu_lon,mu_colat), kappa=kappa)
+    samples = vmf.random(size=100)
+    print samples
+    phi = samples[:,0]
+    theta = 90.-samples[:,1]
 
-    ax = plt.axes(projection = ccrs.Orthographic(30.,30.))
+    ax = plt.axes(projection = ccrs.Orthographic(30,30))
     ax.scatter(phi, theta, transform=ccrs.PlateCarree())
     ax.gridlines()
     ax.set_global()
