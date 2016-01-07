@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pymc3
 import cartopy.crs as ccrs
 
-import bayesian_plate_tectonics as bpt
+import mcplates
 
 d2r = np.pi/180.
 r2d = 180./np.pi
@@ -14,7 +14,7 @@ kappa = 50.0
 
 
 with pymc3.Model():
-    vmf = bpt.VonMisesFisher('vmf', lon_colat=(mu_lon,mu_colat), kappa=kappa)
+    vmf = mcplates.VonMisesFisher('vmf', lon_colat=(mu_lon,mu_colat), kappa=kappa)
     samples = vmf.random(size=100)
     print samples
     phi = samples[:,0]
