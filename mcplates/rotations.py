@@ -4,18 +4,19 @@ d2r = np.pi/180.
 r2d = 180./np.pi
 
 def spherical_to_cartesian( longitude, latitude, norm ):
-    assert(longitude >= 0. and longitude <= 360.)
-    assert(latitude >= -90. and latitude <= 90.)
-    assert(norm >= 0.)
+    assert(np.all(longitude >= 0.) and np.all(longitude <= 360.))
+    assert(np.all(latitude >= -90.) and np.all(latitude <= 90.))
+    assert(np.all(norm >= 0.))
     colatitude = 90.-latitude
     return np.array([ norm * np.sin(colatitude*d2r)*np.cos(longitude*d2r),
                       norm * np.sin(colatitude*d2r)*np.sin(longitude*d2r),
                       norm * np.cos(colatitude*d2r) ] )
 
-def cartesian_to_spherical( vec ):
-    norm = np.sqrt(vec[0]*vec[0] + vec[1]*vec[1] + vec[2]*vec[2])
-    latitude = 90. - np.arccos(vec[2]/norm)*r2d
-    longitude = np.arctan2(vec[1], vec[0] )*r2d
+def cartesian_to_spherical( vecs ):
+    v = np.reshape(vecs, (3,-1))
+    norm = np.sqrt(v[0,:]*v[0,:] + v[1,:]*v[1,:] + v[2,:]*v[2,:])
+    latitude = 90. - np.arccos(v[2,:]/norm)*r2d
+    longitude = np.arctan2(v[1,:], v[0,:] )*r2d
     return longitude, latitude, norm
 
 def rotate_x(vector, theta):
