@@ -22,10 +22,8 @@ class Pole(object):
         Initialize the pole with lon, lat, and norm.
         """
         self._pole = rotations.spherical_to_cartesian(longitude, latitude, norm)
-        self._phi = rotations.d2r * longitude
-        self._theta = rotations.d2r * (90.-latitude)
         self._angular_error = angular_error
-        self._rotation_matrix = rotations.construct_euler_rotation_matrix( 0., self._theta, self._phi )
+        self._rotation_matrix = rotations.construct_euler_rotation_matrix( 0., self.colatitude*rotations.d2r, self.longitude*rotations.d2r )
 
     @property
     def longitude(self):
@@ -61,6 +59,9 @@ class Pole(object):
         p = rotations.rotate_z(p, angle*rotations.d2r)
         p = rotations.rotate_y(p, pole.colatitude*rotations.d2r)
         self._pole = rotations.rotate_z(p, pole.longitude*rotations.d2r)
+        # reset rotation matrix
+        lon,lat,_ = rotations.cartesian_to_spherical(self._pole)
+        self._rotation_matrix = rotations.construct_euler_rotation_matrix( 0., self.colatitude*rotations.d2r, self.longitude*rotations.d2r )
 
     def plot(self, axes, **kwargs):
         artists = []

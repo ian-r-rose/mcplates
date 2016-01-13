@@ -5,9 +5,6 @@ import pymc3
 
 from mcplates import VonMisesFisher
 
-d2r = np.pi/180.
-r2d = 180./np.pi
-
 # Generate a synthetic data set
 with pymc3.Model() as synthetic:
     mu_colat = 100.

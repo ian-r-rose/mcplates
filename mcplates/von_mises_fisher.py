@@ -70,8 +70,9 @@ class VonMisesFisher(Continuous):
             return samples
             
         cartesian_samples = cartesian_sample_generator(size) 
-        colat_samples = np.fromiter( (np.arccos( s[2]/np.sqrt(np.dot(s,s)) ) for s in cartesian_samples), dtype=np.float64, count=size)
-        lon_samples = np.fromiter( (np.arctan2( s[1], s[0] ) for s in cartesian_samples), dtype=np.float64, count=size)
+        count = size if size is not None else 1
+        colat_samples = np.fromiter( (np.arccos( s[2]/np.sqrt(np.dot(s,s)) ) for s in cartesian_samples), dtype=np.float64, count=count)
+        lon_samples = np.fromiter( (np.arctan2( s[1], s[0] ) for s in cartesian_samples), dtype=np.float64, count=count)
         return np.transpose(np.vstack((lon_samples, colat_samples)))*r2d
 
     def logp(self, lon_colat):
