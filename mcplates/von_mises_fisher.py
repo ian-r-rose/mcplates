@@ -8,31 +8,11 @@ from pymc3.distributions.dist_math import bound
 import theano.tensor
 import theano
 
+from . import rotations
+
 d2r = np.pi/180.
 r2d = 180./np.pi
 eps = 1.e-6
-
-def construct_euler_rotation_matrix(alpha, beta, gamma):
-    """
-    Make a 3x3 matrix which represents a rigid body rotation,
-    with alpha being the first rotation about the z axis,
-    beta being the second rotation about the y axis, and
-    gamma being the third rotation about the z axis.
- 
-    All angles are assumed to be in radians
-    """
-    rot_alpha = np.array( [ [np.cos(alpha), -np.sin(alpha), 0.],
-                            [np.sin(alpha), np.cos(alpha), 0.],
-                            [0., 0., 1.] ] )
-    rot_beta = np.array( [ [np.cos(beta), 0., np.sin(beta)],
-                           [0., 1., 0.],
-                           [-np.sin(beta), 0., np.cos(beta)] ] )
-    rot_gamma = np.array( [ [np.cos(gamma), -np.sin(gamma), 0.],
-                            [np.sin(gamma), np.cos(gamma), 0.],
-                            [0., 0., 1.] ] )
-    rot = np.dot( rot_gamma, np.dot( rot_beta, rot_alpha ) )
-    return rot
-    
 
 class VonMisesFisher(Continuous):
     """
@@ -64,7 +44,7 @@ class VonMisesFisher(Continuous):
     def random(self, point=None, size=None):
         lon_colat, kappa = draw_values([self.lon_colat, self.kappa], point=point)
         # make the appropriate euler rotation matrix
-        rotation_matrix = construct_euler_rotation_matrix(0., lon_colat[1]*d2r, lon_colat[0]*d2r)
+        rotation_matrix = rotations.construct_euler_rotation_matrix(0., lon_colat[1]*d2r, lon_colat[0]*d2r)
 
         def cartesian_sample_generator(size=None):
             # Generate samples around the z-axis, then rotate
