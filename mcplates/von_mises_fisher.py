@@ -44,7 +44,19 @@ class VonMisesFisher(Continuous):
     def random(self, point=None, size=None):
         lon_colat, kappa = draw_values([self.lon_colat, self.kappa], point=point)
         # make the appropriate euler rotation matrix
-        rotation_matrix = rotations.construct_euler_rotation_matrix(0., lon_colat[1]*d2r, lon_colat[0]*d2r)
+        alpha = 0.
+        beta = lon_colat[1]*d2r
+        gamma = lon_colat[0]*d2r
+        rot_alpha = np.array( [ [np.cos(alpha), -np.sin(alpha), 0.],
+                                [np.sin(alpha), np.cos(alpha), 0.],
+                                [0., 0., 1.] ] )
+        rot_beta = np.array( [ [np.cos(beta), 0., np.sin(beta)],
+                               [0., 1., 0.],
+                               [-np.sin(beta), 0., np.cos(beta)] ] )
+        rot_gamma = np.array( [ [np.cos(gamma), -np.sin(gamma), 0.],
+                                [np.sin(gamma), np.cos(gamma), 0.],
+                                [0., 0., 1.] ] )
+        rotation_matrix = np.dot( rot_gamma, np.dot( rot_beta, rot_alpha ) )
 
         def cartesian_sample_generator(size=None):
             # Generate samples around the z-axis, then rotate

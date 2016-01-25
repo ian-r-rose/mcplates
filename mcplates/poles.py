@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import matplotlib.path
 import matplotlib.patches
 
+import theano.tensor as tt
+
 import cartopy.crs as ccrs
 
 from . import rotations
@@ -22,26 +24,24 @@ class Pole(object):
         Initialize the pole with lon, lat, and norm.
         """
         self._pole = rotations.spherical_to_cartesian(longitude, latitude, norm)
-        self._phi = rotations.d2r * longitude
-        self._theta = rotations.d2r * (90.-latitude)
+        self._pole_numpy = rotations.spherical_to_cartesian_numpy(longitude,latitude,norm)
         self._angular_error = angular_error
-        self._rotation_matrix = rotations.construct_euler_rotation_matrix( 0., self._theta, self._phi )
 
     @property
     def longitude(self):
-        return np.arctan2(self._pole[1], self._pole[0] )*rotations.r2d
+        return np.arctan2(self._pole_numpy[1], self._pole_numpy[0] )*rotations.r2d
 
     @property
     def latitude(self):
-        return 90. - np.arccos(self._pole[2]/self.norm)*rotations.r2d
+        return 90. - np.arccos(self._pole_numpy[2]/self.norm)*rotations.r2d
 
     @property
     def colatitude(self):
-        return np.arccos(self._pole[2]/self.norm)*rotations.r2d
+        return np.arccos(self._pole_numpy[2]/self.norm)*rotations.r2d
 
     @property
     def norm(self):
-        return np.sqrt(self._pole[0]*self._pole[0] + self._pole[1]*self._pole[1] + self._pole[2]*self._pole[2])
+        return np.sqrt(self._pole_numpy[0]*self._pole_numpy[0] + self._pole_numpy[1]*self._pole_numpy[1] + self._pole_numpy[2]*self._pole_numpy[2])
 
     @property
     def angular_error(self):
@@ -56,26 +56,29 @@ class Pole(object):
         # requested rotation, then restore things to the original
         # orientation 
         p = self._pole
-        p = rotations.rotate_z(p, -pole.longitude*rotations.d2r)
-        p = rotations.rotate_y(p, -pole.colatitude*rotations.d2r)
+        lon,colat,norm = rotations.cartesian_to_spherical(pole._pole)
+        p = rotations.rotate_z(p, -lon*rotations.d2r)
+        p = rotations.rotate_y(p, -colat*rotations.d2r)
         p = rotations.rotate_z(p, angle*rotations.d2r)
-        p = rotations.rotate_y(p, pole.colatitude*rotations.d2r)
-        self._pole = rotations.rotate_z(p, pole.longitude*rotations.d2r)
+        p = rotations.rotate_y(p, colat*rotations.d2r)
+        self._pole = rotations.rotate_z(p, lon*rotations.d2r)
 
     def plot(self, axes, **kwargs):
         artists = []
+        plon,plat,pnorm = rotations.cartesian_to_spherical_numpy(self._pole_numpy)
         if self._angular_error is not None:
             lons = np.linspace(0., 360., 361.)
             lats = np.ones_like(lons)*(90.-self.angular_error)
             norms = np.ones_like(lons)
-            vecs = rotations.spherical_to_cartesian(lons,lats,norms)
-            rotated_vecs = np.dot(self._rotation_matrix, vecs)
-            lons,lats,norms = rotations.cartesian_to_spherical(rotated_vecs)
+            vecs = rotations.spherical_to_cartesian_numpy(lons,lats,norms)
+            rotation_matrix = rotations.construct_euler_rotation_matrix_numpy( 0., (90.-plat[0])*rotations.d2r, plon[0]*rotations.d2r )
+            rotated_vecs = np.dot(rotation_matrix, vecs)
+            lons,lats,norms = rotations.cartesian_to_spherical_numpy(rotated_vecs)
             path= matplotlib.path.Path( np.transpose(np.array([lons,lats])))
             circ_patch = matplotlib.patches.PathPatch(path, transform=ccrs.PlateCarree(), alpha=0.2, **kwargs) 
             circ_artist = axes.add_patch(circ_patch) 
             artists.append(circ_artist)
-        artist = axes.scatter(self.longitude,self.latitude, transform=ccrs.PlateCarree(), **kwargs)
+        artist = axes.scatter(plon,plat, transform=ccrs.PlateCarree(), **kwargs)
         artists.append(artist)
         return artists
 
