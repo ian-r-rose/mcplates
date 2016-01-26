@@ -11,19 +11,21 @@ import mcplates.rotations as rotations
 ages =[0.,20.,30.]
 lon_lats = [ [300., -30.], [360.,0.], [60.,30.] ]
 
-def generate_pole( euler_pole, age ):
-    pole = PaleomagneticPole(lon_lats[0][0], lon_lats[0][1], age=age)
-    pole.rotate(euler_pole, euler_pole.rate*age)
-    return [pole.longitude,pole.latitude]
+def generate_pole( start_pole, euler_pole, age ):
+    start_pole.rotate(euler_pole, euler_pole.rate*age)
+    return [start_pole.longitude,start_pole.latitude]
 
     
 with pymc3.Model() as model:
     euler_pole_direction = VonMisesFisher('direction', lon_lat=(0.,0.), kappa=0.00)
     euler_pole_rate = pymc3.Exponential('rate', 1.) 
+    initial_pole_direction = VonMisesFisher('initial_pole', lon_lat=lon_lats[0], kappa=300.)
+
     euler_pole = EulerPole( euler_pole_direction[0], euler_pole_direction[1], euler_pole_rate)
 
     for i in range(len(ages)):
-        lon_lat = generate_pole(euler_pole, ages[i])
+        start_pole = PaleomagneticPole(initial_pole_direction[0], initial_pole_direction[1], age=ages[i])
+        lon_lat = generate_pole(start_pole, euler_pole, ages[i])
         observed_pole = VonMisesFisher('p'+str(i), lon_lat, kappa = 100., observed=lon_lats[i])
         
 
@@ -34,10 +36,13 @@ with pymc3.Model() as model:
 def run(n):
     with model:
         trace = pymc3.sample(n, step, start=start)
-        directions = trace['direction']
+        euler_directions = trace['direction']
+        start_directions = trace['initial_pole']
         rates = trace['rate']
-        elons = directions[:,0]
-        elats = directions[:,1]
+        elons = euler_directions[:,0]
+        elats = euler_directions[:,1]
+        slons = start_directions[:,0]
+        slats = start_directions[:,1]
 #        ax = pymc3.traceplot(trace)
 #        plt.show()
         ax = plt.axes(projection = ccrs.Robinson())
@@ -49,8 +54,8 @@ def run(n):
         age_list = np.linspace(ages[0], ages[-1], 100)
         pathlons = np.empty_like(age_list)
         pathlats = np.empty_like(age_list)
-        initial_pole = rotations.spherical_to_cartesian_numpy( lon_lats[0][0], lon_lats[0][1], 1.0 )
-        for elon, elat, rate in zip(elons[::interval],elats[::interval],rates[::interval]):
+        for slon, slat, elon, elat, rate in zip(slons[::interval], slats[::interval], elons[::interval],elats[::interval],rates[::interval]):
+            initial_pole = rotations.spherical_to_cartesian_numpy( slon, slat, 1.0 )
             euler_pole = rotations.spherical_to_cartesian_numpy( elon, elat, rate )
             for i,a in enumerate(age_list):
                 final_pole = rotations.rotate_numpy(initial_pole, euler_pole, rate*a)
