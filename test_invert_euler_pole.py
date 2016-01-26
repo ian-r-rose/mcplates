@@ -8,8 +8,8 @@ from mcplates import *
 import mcplates.rotations_numpy as rnp
 
 # Generate a synthetic data set
-ages =[0.,20.,30.]
-lon_lats = [ [300., -30.], [360.,0.], [60.,30.] ]
+ages =[0.,20.,30.,60.]
+lon_lats = [ [300., -30.], [360.,0.], [60.,30.], [110., 0.]]
 
 def generate_pole( start_pole, euler_pole, age ):
     start_pole.rotate(euler_pole, euler_pole.rate*age)
@@ -19,14 +19,14 @@ def generate_pole( start_pole, euler_pole, age ):
 with pymc3.Model() as model:
     euler_pole_direction = VonMisesFisher('euler_pole', lon_lat=(0.,0.), kappa=0.00)
     euler_pole_rate = pymc3.Exponential('rate', 1.) 
-    initial_pole_direction = VonMisesFisher('initial_pole', lon_lat=lon_lats[0], kappa=300.)
+    initial_pole_direction = VonMisesFisher('initial_pole', lon_lat=lon_lats[0], kappa=kappa_from_two_sigma(10.))
 
     euler_pole = EulerPole( euler_pole_direction[0], euler_pole_direction[1], euler_pole_rate)
 
     for i in range(len(ages)):
         start_pole = PaleomagneticPole(initial_pole_direction[0], initial_pole_direction[1], age=ages[i])
         lon_lat = generate_pole(start_pole, euler_pole, ages[i])
-        observed_pole = VonMisesFisher('p'+str(i), lon_lat, kappa = 100., observed=lon_lats[i])
+        observed_pole = VonMisesFisher('p'+str(i), lon_lat, kappa = kappa_from_two_sigma(10.), observed=lon_lats[i])
         
 
     start = pymc3.find_MAP()
@@ -46,7 +46,7 @@ def run(n):
 #        ax = pymc3.traceplot(trace)
 #        plt.show()
         ax = plt.axes(projection = ccrs.Robinson())
-        ax.scatter(elons, elats, transform=ccrs.PlateCarree())
+        ax.scatter(elons, elats, transform=ccrs.PlateCarree(), edgecolors='none', alpha=0.1)
         ax.gridlines()
         ax.set_global()
 

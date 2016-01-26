@@ -126,3 +126,9 @@ def plot_pole(axes, lon, lat, a95=None, **kwargs):
         artist = axes.scatter(lon,lat, transform=ccrs.PlateCarree(), **kwargs)
         artists.append(artist)
     return artists
+
+def two_sigma_from_kappa( kappa ):
+    return 140./np.sqrt(kappa)
+
+def kappa_from_two_sigma( two_sigma ):
+    return 140.*140./two_sigma/two_sigma
