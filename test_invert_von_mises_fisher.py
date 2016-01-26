@@ -7,19 +7,19 @@ from mcplates import VonMisesFisher
 
 # Generate a synthetic data set
 with pymc3.Model() as synthetic:
-    mu_colat = 100.
+    mu_lat = -10.
     mu_lon = 60.
     kappa_hidden = 10
 
-    vmf = VonMisesFisher('vmf', lon_colat=np.array([mu_lon,mu_colat]), kappa=kappa_hidden)
+    vmf = VonMisesFisher('vmf', lon_lat=np.array([mu_lon,mu_lat]), kappa=kappa_hidden)
     data = vmf.random(size=100)
 
 
 with pymc3.Model() as model:
     kappa = pymc3.Exponential('kappa', 1.)
-    lon_colat = VonMisesFisher('lon_colat', lon_colat=(0.,0.), kappa=0.01)
+    lon_lat = VonMisesFisher('lon_lat', lon_lat=(0.,0.), kappa=0.00)
 
-    direction = VonMisesFisher('direction', lon_colat=lon_colat, kappa=kappa, observed=data)
+    direction = VonMisesFisher('direction', lon_lat=lon_lat, kappa=kappa, observed=data)
 
     start = pymc3.find_MAP()
     print start
