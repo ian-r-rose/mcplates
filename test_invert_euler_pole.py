@@ -12,7 +12,7 @@ r2d = 180./np.pi
 
 # Generate a synthetic data set
 ages =[0.,20.,30.]
-lon_lats = [ [0., -20.], [0.,0.], [0.,20.] ]
+lon_lats = [ [300., -30.], [360.,0.], [60.,30.] ]
 p1 = PaleomagneticPole(longitude = lon_lats[0][0], latitude=lon_lats[0][1], age=ages[0] )
 p2 = PaleomagneticPole(longitude = lon_lats[1][0], latitude=lon_lats[1][1], age=ages[1] )
 p3 = PaleomagneticPole(longitude = lon_lats[2][0], latitude=lon_lats[2][1], age=ages[2] )

@@ -56,7 +56,8 @@ class Pole(object):
         # requested rotation, then restore things to the original
         # orientation 
         p = tt.as_tensor_variable(self._pole)
-        lon,colat,norm = rotations.cartesian_to_spherical(pole._pole)
+        lon,lat,norm = rotations.cartesian_to_spherical(pole._pole)
+        colat = 90.-lat
         p = rotations.rotate_z(p, -lon[0]*rotations.d2r)
         p = rotations.rotate_y(p, -colat[0]*rotations.d2r)
         p = rotations.rotate_z(p, angle*rotations.d2r)
