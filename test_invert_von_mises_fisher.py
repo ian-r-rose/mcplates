@@ -20,7 +20,7 @@ with pymc3.Model() as synthetic:
 
 with pymc3.Model() as model:
     kappa = pymc3.Exponential('kappa', 1.)
-    lon_colat = VonMisesFisher('lon_colat', lon_colat=(0.,0.), kappa=0.01)
+    lon_colat = VonMisesFisher('lon_colat', lon_colat=(0.,0.), kappa=0.00)
 
     direction = VonMisesFisher('direction', lon_colat=lon_colat, kappa=kappa, observed=data)
 

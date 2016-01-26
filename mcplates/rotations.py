@@ -21,23 +21,23 @@ def cartesian_to_spherical( vecs ):
     return longitude, latitude, norm
 
 def rotate_x(vector, theta):
-    flat_rot = [1., 0., 0.,
-                0., tt.cos(theta), -tt.sin(theta),
-                0., tt.sin(theta), tt.cos(theta)]
+    flat_rot = tt.as_tensor_variable([1., 0., 0.,
+                                      0., tt.cos(theta), -tt.sin(theta),
+                                      0., tt.sin(theta), tt.cos(theta)])
     rot = flat_rot.reshape((3,3))
     return tt.dot(rot, vector.T)
 
 def rotate_y(vector, theta):
-    flat_rot = [tt.cos(theta), 0., tt.sin(theta),
-                0., 1., 0.,
-                -tt.sin(theta), 0., tt.cos(theta)]
+    flat_rot = tt.as_tensor_variable([tt.cos(theta), 0., tt.sin(theta),
+                                      0., 1., 0.,
+                                      -tt.sin(theta), 0., tt.cos(theta)])
     rot = flat_rot.reshape((3,3))
     return tt.dot(rot, vector.T)
 
 def rotate_z(vector, theta):
-    flat_rot = [tt.cos(theta), -tt.sin(theta), 0.,
-                tt.sin(theta), tt.cos(theta), 0.,
-                0., 0., 1.]
+    flat_rot = tt.as_tensor_variable([tt.cos(theta), -tt.sin(theta), 0.,
+                                      tt.sin(theta), tt.cos(theta), 0.,
+                                      0., 0., 1.])
     rot = flat_rot.reshape((3,3))
     return tt.dot(rot, vector.T)
 
@@ -51,20 +51,33 @@ def construct_euler_rotation_matrix(alpha, beta, gamma):
     All angles are assumed to be in radians
     """
     flat_rot_alpha = tt.as_tensor_variable([ tt.cos(alpha), -tt.sin(alpha), 0.,
-                       tt.sin(alpha), tt.cos(alpha), 0.,
-                       0., 0., 1.])
+                                             tt.sin(alpha), tt.cos(alpha), 0.,
+                                             0., 0., 1.])
     flat_rot_beta = tt.as_tensor_variable([ tt.cos(beta), 0., tt.sin(beta),
-                      0., 1., 0.,
-                      -tt.sin(beta), 0., tt.cos(beta)])
+                                            0., 1., 0.,
+                                            -tt.sin(beta), 0., tt.cos(beta)])
     flat_rot_gamma = tt.as_tensor_variable([ tt.cos(gamma), -tt.sin(gamma), 0.,
-                       tt.sin(gamma), tt.cos(gamma), 0.,
-                       0., 0., 1.])
+                                             tt.sin(gamma), tt.cos(gamma), 0.,
+                                             0., 0., 1.])
     rot_alpha = flat_rot_alpha.reshape((3,3))
     rot_beta = flat_rot_beta.reshape((3,3))
     rot_gamma = flat_rot_gamma.reshape((3,3))
 
     rot = tt.dot( rot_gamma, tt.dot( rot_beta, rot_alpha ) )
     return rot
+
+def rotate(pole, rotation_pole, angle):
+    # The idea is to rotate the pole so that the Euler pole is
+    # at the pole of the coordinate system, then perform the
+    # requested rotation, then restore things to the original
+    # orientation 
+    lon,colat,norm = cartesian_to_spherical(rotation_pole)
+    p = rotate_z(pole, -lon[0]*d2r)
+    p = rotate_y(p, -colat[0]*d2r)
+    p = rotate_z(p, angle*d2r)
+    p = rotate_y(p, colat[0]*d2r)
+    return rotate_z(p, lon[0]*d2r)
+
 
 def construct_euler_rotation_matrix_numpy(alpha, beta, gamma):
     """

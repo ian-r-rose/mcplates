@@ -24,24 +24,24 @@ class Pole(object):
         Initialize the pole with lon, lat, and norm.
         """
         self._pole = rotations.spherical_to_cartesian(longitude, latitude, norm)
-        self._pole_numpy = rotations.spherical_to_cartesian_numpy(longitude,latitude,norm)
+        #self._pole_numpy = rotations.spherical_to_cartesian_numpy(longitude,latitude,norm)
         self._angular_error = angular_error
 
     @property
     def longitude(self):
-        return np.arctan2(self._pole_numpy[1], self._pole_numpy[0] )*rotations.r2d
+        return tt.arctan2(self._pole[1], self._pole[0] )*rotations.r2d
 
     @property
     def latitude(self):
-        return 90. - np.arccos(self._pole_numpy[2]/self.norm)*rotations.r2d
+        return 90. - tt.arccos(self._pole[2]/self.norm)*rotations.r2d
 
     @property
     def colatitude(self):
-        return np.arccos(self._pole_numpy[2]/self.norm)*rotations.r2d
+        return tt.arccos(self._pole[2]/self.norm)*rotations.r2d
 
     @property
     def norm(self):
-        return np.sqrt(self._pole_numpy[0]*self._pole_numpy[0] + self._pole_numpy[1]*self._pole_numpy[1] + self._pole_numpy[2]*self._pole_numpy[2])
+        return tt.sqrt(self._pole[0]*self._pole[0] + self._pole[1]*self._pole[1] + self._pole[2]*self._pole[2])
 
     @property
     def angular_error(self):
@@ -55,13 +55,13 @@ class Pole(object):
         # at the pole of the coordinate system, then perform the
         # requested rotation, then restore things to the original
         # orientation 
-        p = self._pole
+        p = tt.as_tensor_variable(self._pole)
         lon,colat,norm = rotations.cartesian_to_spherical(pole._pole)
-        p = rotations.rotate_z(p, -lon*rotations.d2r)
-        p = rotations.rotate_y(p, -colat*rotations.d2r)
+        p = rotations.rotate_z(p, -lon[0]*rotations.d2r)
+        p = rotations.rotate_y(p, -colat[0]*rotations.d2r)
         p = rotations.rotate_z(p, angle*rotations.d2r)
-        p = rotations.rotate_y(p, colat*rotations.d2r)
-        self._pole = rotations.rotate_z(p, lon*rotations.d2r)
+        p = rotations.rotate_y(p, colat[0]*rotations.d2r)
+        self._pole = rotations.rotate_z(p, lon[0]*rotations.d2r)
 
     def plot(self, axes, **kwargs):
         artists = []
@@ -102,6 +102,10 @@ class PaleomagneticPole(Pole):
         self._age = age
         self._sigma_age = sigma_age
         super(PaleomagneticPole, self).__init__(longitude, latitude, 1.0, **kwargs)
+
+    @property
+    def age(self):
+        return self._age
 
 
 class EulerPole(Pole):
