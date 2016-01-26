@@ -24,10 +24,10 @@ ages.pop()
 d2r = np.pi/180.
 r2d = 180./np.pi
 
-def generate_pole( euler_pole_direction, euler_pole_rate, age ):
+def generate_pole( euler_pole, age ):
     pole = PaleomagneticPole(lon_lats[0][0], lon_lats[0][1], age=age)
     euler_pole = EulerPole( euler_pole_direction[0], euler_pole_direction[1], euler_pole_rate)
-    pole.rotate(euler_pole, euler_pole_rate*age)
+    pole.rotate(euler_pole, euler_pole.rate*age)
     lon = pole.longitude
     lat = pole.latitude
     return tt.as_tensor_variable([lon,lat])
@@ -39,7 +39,7 @@ with pymc3.Model() as model:
     euler_pole = EulerPole( euler_pole_direction[0], euler_pole_direction[1], euler_pole_rate)
 
     for i in range(len(ages)):
-        lon_lat = generate_pole(euler_pole_direction, euler_pole_rate, ages[i])
+        lon_lat = generate_pole(euler_pole, ages[i])
         observed_pole = VonMisesFisher('p'+str(i), lon_lat, kappa = 100., observed=lon_lats[i])
         
 
