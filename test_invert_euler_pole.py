@@ -5,7 +5,7 @@ import theano
 
 import pymc3
 from mcplates import *
-import mcplates.rotations as rotations
+import mcplates.rotations_numpy as rnp
 
 # Generate a synthetic data set
 ages =[0.,20.,30.]
@@ -55,11 +55,11 @@ def run(n):
         pathlons = np.empty_like(age_list)
         pathlats = np.empty_like(age_list)
         for slon, slat, elon, elat, rate in zip(slons[::interval], slats[::interval], elons[::interval],elats[::interval],rates[::interval]):
-            initial_pole = rotations.spherical_to_cartesian_numpy( slon, slat, 1.0 )
-            euler_pole = rotations.spherical_to_cartesian_numpy( elon, elat, rate )
+            initial_pole = rnp.spherical_to_cartesian( slon, slat, 1.0 )
+            euler_pole = rnp.spherical_to_cartesian( elon, elat, rate )
             for i,a in enumerate(age_list):
-                final_pole = rotations.rotate_numpy(initial_pole, euler_pole, rate*a)
-                lon,lat,_ = rotations.cartesian_to_spherical_numpy(final_pole)
+                final_pole = rnp.rotate(initial_pole, euler_pole, rate*a)
+                lon,lat,_ = rnp.cartesian_to_spherical(final_pole)
                 pathlons[i] = lon[0]
                 pathlats[i] = lat[0]
             ax.plot(pathlons,pathlats,color='r', transform=ccrs.PlateCarree(), alpha=0.1)

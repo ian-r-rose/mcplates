@@ -7,8 +7,6 @@ from pymc3.distributions.dist_math import bound
 
 import theano.tensor as tt
 
-from . import rotations
-
 d2r = np.pi/180.
 r2d = 180./np.pi
 eps = 1.e-6
