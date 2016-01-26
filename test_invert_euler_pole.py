@@ -17,7 +17,7 @@ def generate_pole( start_pole, euler_pole, age ):
 
     
 with pymc3.Model() as model:
-    euler_pole_direction = VonMisesFisher('direction', lon_lat=(0.,0.), kappa=0.00)
+    euler_pole_direction = VonMisesFisher('euler_pole', lon_lat=(0.,0.), kappa=0.00)
     euler_pole_rate = pymc3.Exponential('rate', 1.) 
     initial_pole_direction = VonMisesFisher('initial_pole', lon_lat=lon_lats[0], kappa=300.)
 
@@ -36,7 +36,7 @@ with pymc3.Model() as model:
 def run(n):
     with model:
         trace = pymc3.sample(n, step, start=start)
-        euler_directions = trace['direction']
+        euler_directions = trace['euler_pole']
         start_directions = trace['initial_pole']
         rates = trace['rate']
         elons = euler_directions[:,0]
@@ -62,7 +62,7 @@ def run(n):
                 lon,lat,_ = rotations.cartesian_to_spherical_numpy(final_pole)
                 pathlons[i] = lon[0]
                 pathlats[i] = lat[0]
-            ax.plot(pathlons,pathlats,color='r', transform=ccrs.PlateCarree(), alpha=0.2)
+            ax.plot(pathlons,pathlats,color='r', transform=ccrs.PlateCarree(), alpha=0.1)
 
         for p in lon_lats:
             plot_pole(ax, p[0], p[1], a95=10.)
