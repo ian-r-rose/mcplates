@@ -5,7 +5,7 @@ d2r = np.pi/180.
 r2d = 180./np.pi
 
 def spherical_to_cartesian( longitude, latitude, norm ):
-    assert(tt.all(tt.ge(longitude, 0.)) and tt.all(tt.le(longitude,360.)))
+#    assert(tt.all(tt.ge(longitude, 0.)) and tt.all(tt.le(longitude,360.)))
     assert(tt.all(tt.ge(latitude, -90.)) and tt.all(tt.le(latitude,90.)))
     assert(tt.all(tt.ge(norm, 0.)))
     colatitude = 90.-latitude
@@ -79,6 +79,16 @@ def rotate(pole, rotation_pole, angle):
     p = rotate_y(p, colat[0]*d2r)
     return rotate_z(p, lon[0]*d2r)
 
+def rotate_numpy(pole, rotation_pole, angle):
+    # The idea is to rotate the pole so that the Euler pole is
+    # at the pole of the coordinate system, then perform the
+    # requested rotation, then restore things to the original
+    # orientation 
+    lon,lat,norm = cartesian_to_spherical_numpy(rotation_pole)
+    colat = 90.-lat
+    m1 = construct_euler_rotation_matrix_numpy( -lon[0]*d2r, -colat[0]*d2r, angle*d2r )
+    m2 = construct_euler_rotation_matrix_numpy( 0., colat[0]*d2r, lon[0]*d2r )
+    return np.dot( m2, np.dot(m1, pole) )
 
 def construct_euler_rotation_matrix_numpy(alpha, beta, gamma):
     """
@@ -102,7 +112,7 @@ def construct_euler_rotation_matrix_numpy(alpha, beta, gamma):
     return rot
 
 def spherical_to_cartesian_numpy( longitude, latitude, norm ):
-    assert(np.all(longitude >= 0.) and np.all(longitude <= 360.))
+#    assert(np.all(longitude >= 0.) and np.all(longitude <= 360.))
     assert(np.all(latitude >= -90.) and np.all(latitude <= 90.))
     assert(np.all(norm >= 0.))
     colatitude = 90.-latitude
