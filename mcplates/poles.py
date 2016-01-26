@@ -124,3 +124,20 @@ class EulerPole(Pole):
     def angle(self, time):
         return self.rate*time
 
+def plot_pole(axes, lon, lat, a95=None, **kwargs):
+    artists = []
+    if a95 is not None:
+	lons = np.linspace(0., 360., 361.)
+	lats = np.ones_like(lons)*(90.-a95)
+	norms = np.ones_like(lons)
+	vecs = rotations.spherical_to_cartesian_numpy(lons,lats,norms)
+	rotation_matrix = rotations.construct_euler_rotation_matrix_numpy( 0., (90.-lat)*rotations.d2r, lon*rotations.d2r )
+	rotated_vecs = np.dot(rotation_matrix, vecs)
+	lons,lats,norms = rotations.cartesian_to_spherical_numpy(rotated_vecs)
+	path= matplotlib.path.Path( np.transpose(np.array([lons,lats])))
+	circ_patch = matplotlib.patches.PathPatch(path, transform=ccrs.PlateCarree(), alpha=0.2, **kwargs) 
+	circ_artist = axes.add_patch(circ_patch) 
+	artists.append(circ_artist)
+    artist = axes.scatter(lon,lat, transform=ccrs.PlateCarree(), **kwargs)
+    artists.append(artist)
+    return artists

@@ -71,7 +71,8 @@ def rotate(pole, rotation_pole, angle):
     # at the pole of the coordinate system, then perform the
     # requested rotation, then restore things to the original
     # orientation 
-    lon,colat,norm = cartesian_to_spherical(rotation_pole)
+    lon,lat,norm = cartesian_to_spherical(rotation_pole)
+    colat = 90.-lat
     p = rotate_z(pole, -lon[0]*d2r)
     p = rotate_y(p, -colat[0]*d2r)
     p = rotate_z(p, angle*d2r)
