@@ -5,8 +5,7 @@ from pymc3.distributions import Continuous
 from pymc3.distributions.distribution import draw_values, generate_samples
 from pymc3.distributions.dist_math import bound
 
-import theano.tensor
-import theano
+import theano.tensor as tt
 
 from . import rotations
 
@@ -30,14 +29,14 @@ class VonMisesFisher(Continuous):
     def __init__(self, lon_colat, kappa, *args, **kwargs):
         super(VonMisesFisher, self).__init__(shape=2, *args, **kwargs)
 
-        assert(theano.tensor.ge(kappa,0.))
+        assert(tt.ge(kappa,0.))
 
         lon = lon_colat[0]*d2r
         colat = lon_colat[1]*d2r
         self.lon_colat = lon_colat
-        self.mu = [ theano.tensor.sin(colat) * theano.tensor.cos(lon),
-                    theano.tensor.sin(colat) * theano.tensor.sin(lon),
-                    theano.tensor.cos(colat) ]
+        self.mu = [ tt.sin(colat) * tt.cos(lon),
+                    tt.sin(colat) * tt.sin(lon),
+                    tt.cos(colat) ]
         self.kappa = kappa
         self.median = self.mode = self.mean = lon_colat
 
@@ -89,17 +88,17 @@ class VonMisesFisher(Continuous):
     def logp(self, lon_colat):
         kappa = self.kappa
         mu = self.mu
-        lon_colat_r = theano.tensor.reshape( lon_colat*d2r, (-1, 2) )
-        point = [ theano.tensor.sin(lon_colat_r[:,1]) * theano.tensor.cos(lon_colat_r[:,0]),
-                  theano.tensor.sin(lon_colat_r[:,1]) * theano.tensor.sin(lon_colat_r[:,0]),
-                  theano.tensor.cos(lon_colat_r[:,1]) ]
-        point = theano.tensor.as_tensor_variable(point).T
+        lon_colat_r = tt.reshape( lon_colat*d2r, (-1, 2) )
+        point = [ tt.sin(lon_colat_r[:,1]) * tt.cos(lon_colat_r[:,0]),
+                  tt.sin(lon_colat_r[:,1]) * tt.sin(lon_colat_r[:,0]),
+                  tt.cos(lon_colat_r[:,1]) ]
+        point = tt.as_tensor_variable(point).T
 
-        return bound( theano.tensor.switch( theano.tensor.ge(kappa, eps), \
+        return bound( tt.switch( tt.ge(kappa, eps), \
                                              # Kappa greater than zero
-                                             theano.tensor.log( -kappa / ( 2.*np.pi * theano.tensor.expm1(-2.*kappa)) ) + \
-                                             kappa * (theano.tensor.dot(point,mu)-1.),
+                                             tt.log( -kappa / ( 2.*np.pi * tt.expm1(-2.*kappa)) ) + \
+                                             kappa * (tt.dot(point,mu)-1.),
                                              # Kappa equals zero
-                                             theano.tensor.log(1./4./np.pi)),
-                      theano.tensor.all( lon_colat_r[:,1] >= 0. ),
-                      theano.tensor.all( lon_colat_r[:,1] <= np.pi ) )
+                                             tt.log(1./4./np.pi)),
+                      tt.all( lon_colat_r[:,1] >= 0. ),
+                      tt.all( lon_colat_r[:,1] <= np.pi ) )
