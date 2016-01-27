@@ -37,8 +37,8 @@ def construct_euler_rotation_matrix(alpha, beta, gamma):
 
 def spherical_to_cartesian( longitude, latitude, norm ):
 #    assert(np.all(longitude >= 0.) and np.all(longitude <= 360.))
-    assert(np.all(latitude >= -90.) and np.all(latitude <= 90.))
-    assert(np.all(norm >= 0.))
+#    assert(np.all(latitude >= -90.) and np.all(latitude <= 90.))
+#    assert(np.all(norm >= 0.))
     colatitude = 90.-latitude
     return np.array([ norm * np.sin(colatitude*d2r)*np.cos(longitude*d2r),
                       norm * np.sin(colatitude*d2r)*np.sin(longitude*d2r),

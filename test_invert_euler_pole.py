@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.optimize
 import matplotlib.pyplot as plt
 import theano.tensor as tt
 import theano
@@ -9,27 +10,34 @@ import mcplates.rotations_numpy as rnp
 
 # Generate a synthetic data set
 ages =[0.,20.,30.,60.]
+sigma_ages = [2., 2., 2., 2.]
 lon_lats = [ [300., -30.], [360.,0.], [60.,30.], [110., 0.]]
 
-def generate_pole( start_pole, euler_pole, age ):
-    start_pole.rotate(euler_pole, euler_pole.rate*age)
-    return [start_pole.longitude,start_pole.latitude]
+@theano.compile.ops.as_op(itypes=[tt.dvector, tt.dvector, tt.dscalar, tt.dscalar], otypes=[tt.dvector])
+def generate_pole( start_pole_direction, euler_pole_direction, euler_pole_rate, time ):
+    euler_pole = EulerPole( euler_pole_direction[0], euler_pole_direction[1], euler_pole_rate)
+    start_pole = PaleomagneticPole(start_pole_direction[0], start_pole_direction[1], age=time)
+
+    start_pole.rotate( euler_pole, euler_pole.rate*time)
+    return np.array([start_pole.longitude, start_pole.latitude])
+    
+generate_pole.grad = lambda *x: x[0]
 
     
 with pymc3.Model() as model:
     euler_pole_direction = VonMisesFisher('euler_pole', lon_lat=(0.,0.), kappa=0.00)
     euler_pole_rate = pymc3.Exponential('rate', 1.) 
-    initial_pole_direction = VonMisesFisher('initial_pole', lon_lat=lon_lats[0], kappa=kappa_from_two_sigma(10.))
+    start_pole_direction = VonMisesFisher('start_pole', lon_lat=lon_lats[0], kappa=kappa_from_two_sigma(10.))
 
-    euler_pole = EulerPole( euler_pole_direction[0], euler_pole_direction[1], euler_pole_rate)
 
     for i in range(len(ages)):
-        start_pole = PaleomagneticPole(initial_pole_direction[0], initial_pole_direction[1], age=ages[i])
-        lon_lat = generate_pole(start_pole, euler_pole, ages[i])
+        time = pymc3.Normal('t'+str(i), mu=ages[i], sd=sigma_ages[i])
+        lon_lat = generate_pole(start_pole_direction, euler_pole_direction, euler_pole_rate, time)
+        print lon_lat
         observed_pole = VonMisesFisher('p'+str(i), lon_lat, kappa = kappa_from_two_sigma(10.), observed=lon_lats[i])
         
 
-    start = pymc3.find_MAP()
+    start = pymc3.find_MAP(fmin=scipy.optimize.fmin_powell)
     print start
     step = pymc3.Metropolis()
 
@@ -37,7 +45,7 @@ def run(n):
     with model:
         trace = pymc3.sample(n, step, start=start)
         euler_directions = trace['euler_pole']
-        start_directions = trace['initial_pole']
+        start_directions = trace['start_pole']
         rates = trace['rate']
         elons = euler_directions[:,0]
         elats = euler_directions[:,1]

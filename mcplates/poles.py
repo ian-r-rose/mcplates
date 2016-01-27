@@ -27,24 +27,25 @@ class Pole(object):
         """
         Initialize the pole with lon, lat, and norm.
         """
-        self._pole = rtt.spherical_to_cartesian(longitude, latitude, norm)
+        self._pole = rnp.spherical_to_cartesian(longitude, latitude, norm)
+        self._pole = np.asarray(self._pole)
         self._angular_error = angular_error
 
     @property
     def longitude(self):
-        return tt.arctan2(self._pole[1], self._pole[0] )*rtt.r2d
+        return np.arctan2(self._pole[1], self._pole[0] )*rnp.r2d
 
     @property
     def latitude(self):
-        return 90. - tt.arccos(self._pole[2]/self.norm)*rtt.r2d
+        return 90. - np.arccos(self._pole[2]/self.norm)*rnp.r2d
 
     @property
     def colatitude(self):
-        return tt.arccos(self._pole[2]/self.norm)*rtt.r2d
+        return np.arccos(self._pole[2]/self.norm)*rnp.r2d
 
     @property
     def norm(self):
-        return tt.sqrt(self._pole[0]*self._pole[0] + self._pole[1]*self._pole[1] + self._pole[2]*self._pole[2])
+        return np.sqrt(self._pole[0]*self._pole[0] + self._pole[1]*self._pole[1] + self._pole[2]*self._pole[2])
 
     @property
     def angular_error(self):
@@ -58,14 +59,12 @@ class Pole(object):
         # at the pole of the coordinate system, then perform the
         # requested rotation, then restore things to the original
         # orientation 
-        p = tt.as_tensor_variable(self._pole)
-        lon,lat,norm = rtt.cartesian_to_spherical(pole._pole)
+        p = pole._pole
+        lon,lat,norm = rnp.cartesian_to_spherical(p)
         colat = 90.-lat
-        p = rtt.rotate_z(p, -lon[0]*rtt.d2r)
-        p = rtt.rotate_y(p, -colat[0]*rtt.d2r)
-        p = rtt.rotate_z(p, angle*rtt.d2r)
-        p = rtt.rotate_y(p, colat[0]*rtt.d2r)
-        self._pole = rtt.rotate_z(p, lon[0]*rtt.d2r)
+        m1 = rnp.construct_euler_rotation_matrix( -lon[0]*rnp.d2r, -colat[0]*rnp.d2r, angle*rnp.d2r )
+        m2 = rnp.construct_euler_rotation_matrix( 0., colat[0]*rnp.d2r, lon[0]*rnp.d2r )
+        self._pole = np.dot( m2, np.dot(m1, self._pole) )
 
 class PlateCentroid(Pole):
     """
@@ -99,12 +98,12 @@ class EulerPole(Pole):
     The rate is given in deg/Myr
     """
     def __init__(self, longitude, latitude, rate, **kwargs):
-        r = rate * rtt.d2r / Julian_year / 1.e6
+        r = rate * rnp.d2r / Julian_year / 1.e6
         super(EulerPole, self).__init__(longitude, latitude, r, **kwargs)
     
     @property
     def rate(self):
-        return self.norm * rtt.r2d * Julian_year * 1.e6
+        return self.norm * rnp.r2d * Julian_year * 1.e6
 
     def angle(self, time):
         return self.rate*time
