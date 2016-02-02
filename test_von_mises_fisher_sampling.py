@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pymc3
+import pymc
 import cartopy.crs as ccrs
 
 import mcplates
@@ -13,15 +13,14 @@ mu_lon =30.
 kappa = 50.0
 
 
-with pymc3.Model():
-    vmf = mcplates.VonMisesFisher('vmf', lon_lat=(mu_lon,mu_lat), kappa=kappa)
-    samples = vmf.random(size=100)
-    print samples
-    phi = samples[:,0]
-    theta = samples[:,1]
+vmf = mcplates.VonMisesFisher('vmf', lon_lat=(mu_lon,mu_lat), kappa=kappa)
+samples = np.array([vmf.random() for i in range(100)])
+print samples
+phi = samples[:,0]
+theta = samples[:,1]
 
-    ax = plt.axes(projection = ccrs.Orthographic(30,30))
-    ax.scatter(phi, theta, transform=ccrs.PlateCarree())
-    ax.gridlines()
-    ax.set_global()
-    plt.show()
+ax = plt.axes(projection = ccrs.Orthographic(30,30))
+ax.scatter(phi, theta, transform=ccrs.PlateCarree())
+ax.gridlines()
+ax.set_global()
+plt.show()

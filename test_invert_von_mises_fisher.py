@@ -1,35 +1,39 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
 
-import pymc3
+import pymc
 
 from mcplates import VonMisesFisher
 
 # Generate a synthetic data set
-with pymc3.Model() as synthetic:
-    mu_lat = -10.
-    mu_lon = 60.
-    kappa_hidden = 10
+lat_hidden = -10.
+lon_hidden = 60.
+kappa_hidden = 10
 
-    vmf = VonMisesFisher('vmf', lon_lat=np.array([mu_lon,mu_lat]), kappa=kappa_hidden)
-    data = vmf.random(size=100)
+vmf = VonMisesFisher('vmf', lon_lat=[lon_hidden,lat_hidden], kappa=kappa_hidden)
+data = np.array([vmf.random() for i in range(100)])
 
 
-with pymc3.Model() as model:
-    kappa = pymc3.Exponential('kappa', 1.)
-    lon_lat = VonMisesFisher('lon_lat', lon_lat=(0.,0.), kappa=0.00)
+kappa = pymc.Exponential('kappa', 1.)
+lon_lat = VonMisesFisher('lon_lat', lon_lat=(0.,0.), kappa=0.00)
 
-    direction = VonMisesFisher('direction', lon_lat=lon_lat, kappa=kappa, observed=data)
+direction = VonMisesFisher('direction', lon_lat=lon_lat, kappa=kappa, value=data, observed=True)
 
-    start = pymc3.find_MAP()
-    print start
-    step = pymc3.Metropolis()
+model =pymc.Model([ direction, kappa, lon_lat ])
+mcmc = pymc.MCMC(model)
+mcmc.sample(10000, 1000, 1)
+kappa_trace = mcmc.trace('kappa')[:]
+lon_trace = np.mod(mcmc.trace('lon_lat')[:,0],360.)
+lat_trace = mcmc.trace('lon_lat')[:,1]
 
-def run(n):
-    with model:
-        trace = pymc3.sample(n, step, start=start)
-        ax = pymc3.traceplot(trace)
-        plt.show()
+pymc.Matplot.trace(mcmc.trace('lon_lat'))
+plt.show()
+pymc.Matplot.trace(mcmc.trace('kappa'))
+plt.show()
 
-if __name__ == "__main__":
-    run(10000)
+ax = plt.axes(projection = ccrs.Robinson(lon_hidden))
+ax.scatter(lon_trace, lat_trace, transform=ccrs.PlateCarree())
+ax.gridlines()
+ax.set_global()
+plt.show()
