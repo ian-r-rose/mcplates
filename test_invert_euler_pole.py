@@ -56,7 +56,7 @@ for i in range(len(ages)):
 model = pymc.Model( model_vars )
 mcmc = pymc.MCMC(model)
 pymc.MAP(model).fit()
-mcmc.sample(100000, 10000, 1)
+mcmc.sample(10000, 1000, 1)
 
 
 euler_1_directions = mcmc.trace('euler_1')[:]
@@ -94,7 +94,8 @@ for start, e1, r1, e2, r2, switch \
     ax.plot(pathlons,pathlats,color='b', transform=ccrs.PlateCarree(), alpha=0.05)
 
 for p in lon_lats:
-    plot_pole(ax, p[0], p[1], a95=10.)
+    pole = PaleomagneticPole( p[0], p[1], angular_error=10. )
+    pole.plot(ax)
 
 
 plt.show()

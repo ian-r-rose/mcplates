@@ -4,16 +4,16 @@ import cartopy.crs as ccrs
 import mcplates
 
 
-pole1 = ( 10., 30., 30.)
-pole2 = ( 20., 60., 20.)
-pole3 = ( 30., 80., 10.)
-
+pole1 = mcplates.PaleomagneticPole( 10., 30., angular_error=30.)
+pole2 = mcplates.PaleomagneticPole( 20., 60., angular_error=20.)
+pole3 = mcplates.PaleomagneticPole( 30., 80., angular_error=10.)
 
 ax = plt.axes(projection=ccrs.Orthographic(30.,30.))
 ax.set_global()
 ax.gridlines()
-mcplates.plot_pole(ax, pole1[0], pole1[1], a95=pole1[2], color='r')
-mcplates.plot_pole(ax, pole2[0], pole2[1], a95=pole2[2], color='g')
-mcplates.plot_pole(ax, pole3[0], pole3[1], a95=pole3[2], color='b')
+
+pole1.plot(ax, color='r')
+pole2.plot(ax, color='g')
+pole3.plot(ax, color='b')
 
 plt.show()

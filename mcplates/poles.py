@@ -66,6 +66,24 @@ class Pole(object):
         m2 = rnp.construct_euler_rotation_matrix( 0., colat[0]*rnp.d2r, lon[0]*rnp.d2r )
         self._pole = np.dot( m2, np.dot(m1, self._pole) )
 
+    def plot(self, axes, **kwargs):
+        artists = []
+        if self._angular_error is not None:
+            lons = np.linspace(0., 360., 361.)
+            lats = np.ones_like(lons)*(90.-self._angular_error)
+            norms = np.ones_like(lons)
+            vecs = rnp.spherical_to_cartesian(lons,lats,norms)
+            rotation_matrix = rnp.construct_euler_rotation_matrix( 0., (self.colatitude)*rnp.d2r, self.longitude*rnp.d2r )
+            rotated_vecs = np.dot(rotation_matrix, vecs)
+            lons,lats,norms = rnp.cartesian_to_spherical(rotated_vecs)
+            path= matplotlib.path.Path( np.transpose(np.array([lons,lats])))
+            circ_patch = matplotlib.patches.PathPatch(path, transform=ccrs.PlateCarree(), alpha=0.2, **kwargs) 
+            circ_artist = axes.add_patch(circ_patch) 
+            artists.append(circ_artist)
+        artist = axes.scatter(self.longitude,self.latitude, transform=ccrs.PlateCarree(), **kwargs)
+        artists.append(artist)
+        return artists
+
 class PlateCentroid(Pole):
     """
     Subclass of Pole which represents the centroid
@@ -82,7 +100,7 @@ class PaleomagneticPole(Pole):
     of a plate. Proxy for plate position (since the
     plate is itself an extended object).
     """
-    def __init__(self, longitude, latitude, age, sigma_age=0.0, **kwargs):
+    def __init__(self, longitude, latitude, age=0., sigma_age=0.0, **kwargs):
         self._age = age
         self._sigma_age = sigma_age
         super(PaleomagneticPole, self).__init__(longitude, latitude, 1.0, **kwargs)
@@ -108,23 +126,6 @@ class EulerPole(Pole):
     def angle(self, time):
         return self.rate*time
 
-def plot_pole(axes, lon, lat, a95=None, **kwargs):
-    artists = []
-    if a95 is not None:
-        lons = np.linspace(0., 360., 361.)
-        lats = np.ones_like(lons)*(90.-a95)
-        norms = np.ones_like(lons)
-        vecs = rnp.spherical_to_cartesian(lons,lats,norms)
-        rotation_matrix = rnp.construct_euler_rotation_matrix( 0., (90.-lat)*rnp.d2r, lon*rnp.d2r )
-        rotated_vecs = np.dot(rotation_matrix, vecs)
-        lons,lats,norms = rnp.cartesian_to_spherical(rotated_vecs)
-        path= matplotlib.path.Path( np.transpose(np.array([lons,lats])))
-        circ_patch = matplotlib.patches.PathPatch(path, transform=ccrs.PlateCarree(), alpha=0.2, **kwargs) 
-        circ_artist = axes.add_patch(circ_patch) 
-        artists.append(circ_artist)
-        artist = axes.scatter(lon,lat, transform=ccrs.PlateCarree(), **kwargs)
-        artists.append(artist)
-    return artists
 
 def two_sigma_from_kappa( kappa ):
     return 140./np.sqrt(kappa)
