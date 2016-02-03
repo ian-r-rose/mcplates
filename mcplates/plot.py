@@ -71,16 +71,26 @@ def cumulative_density_distribution( lon_samples, lat_samples, resolution = 30 )
 
     return lon_grid, lat_grid, hist_cumsum[i_unsort].reshape(lat_grid.shape)
 
-def plot_distribution( ax, lon_samples, lat_samples, resolution=30, samples=False, **kwargs ):
+def plot_distribution( ax, lon_samples, lat_samples, to_plot='d', resolution=30, **kwargs ):
 
     c = kwargs.pop('cmap')
     cmap = c if c is not None else next(cmaps)
 
-    lon_grid, lat_grid, density = density_distribution( lon_samples, lat_samples, resolution )
-    density = ma.masked_where(density <= 0.0, density)
-    artist = ax.pcolormesh( lon_grid, lat_grid, density, cmap=cmap,  transform=ccrs.PlateCarree(), **kwargs)
+    artists = []
 
-    if samples:
-        ax.scatter( lon_samples, lat_samples, color = cmap([0.,0.5,1.])[-1], alpha = 0.1, transform = ccrs.PlateCarree(), edgecolors=None, **kwargs )
+    if 'd' in to_plot:
+        lon_grid, lat_grid, density = density_distribution( lon_samples, lat_samples, resolution )
+        density = ma.masked_where(density <= 0.0, density)
+        a = ax.pcolormesh( lon_grid, lat_grid, density, cmap=cmap,  transform=ccrs.PlateCarree(), **kwargs)
+        artists.append(a)
+
+    if 'e' in to_plot:
+        lon_grid, lat_grid, cumulative_density = cumulative_density_distribution( lon_samples, lat_samples, resolution )
+        a = ax.contour( lon_grid, lat_grid, cumulative_density, levels = [0.683, 0.955], cmap=cmap, transform=ccrs.PlateCarree() )
+        artists.append(a)
+
+    if 's' in to_plot:
+        a = ax.scatter( lon_samples, lat_samples, color = cmap([0.,0.5,1.])[-1], alpha = 0.1, transform = ccrs.PlateCarree(), edgecolors=None, **kwargs )
+        artists.append(a)
     
-    return artist
+    return artists

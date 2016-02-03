@@ -86,16 +86,15 @@ def plot_trace( trace ):
     start_directions = trace('start')[:]
     switchpoints = trace('switchpoint')[:]
 
-    interval = int(len(rates_1)/1000)
+    interval = int(len(rates_1)/300)
 
     ax = plt.axes(projection = ccrs.Orthographic(60.,-10.))
-    #ax = plt.axes(projection = ccrs.Mollweide(190.-180.))
+#    ax = plt.axes(projection = ccrs.Mollweide(80.))
     ax.gridlines()
     ax.set_global()
-    mcplates.plot.plot_distribution( ax, euler_1_directions[:,0], euler_1_directions[:,1], cmap=mcplates.plot.cmap_blue, resolution=60)
-    mcplates.plot.plot_distribution( ax, euler_2_directions[:,0], euler_2_directions[:,1] , cmap=mcplates.plot.cmap_green, resolution=60)
+    mcplates.plot.plot_distribution( ax, euler_1_directions[:,0], euler_1_directions[:,1], cmap=mcplates.plot.cmap_red, resolution=30)
+    mcplates.plot.plot_distribution( ax, euler_2_directions[:,0], euler_2_directions[:,1] , cmap=mcplates.plot.cmap_blue, resolution=30)
 
-    """
     age_list = np.linspace(age[0], age[-1], 100)
     pathlons = np.empty_like(age_list)
     pathlats = np.empty_like(age_list)
@@ -113,7 +112,6 @@ def plot_trace( trace ):
 
         ax.plot(pathlons[:switch_index],pathlats[:switch_index],color='r', transform=ccrs.PlateCarree(), alpha=0.05)
         ax.plot(pathlons[switch_index:],pathlats[switch_index:],color='b', transform=ccrs.PlateCarree(), alpha=0.05)
-    """
 
     for lon,lat,a,c in zip(plon, plat, a95, colors):
         pole = mcplates.PaleomagneticPole( lon, lat, angular_error=a)
@@ -145,11 +143,11 @@ def plot_trace( trace ):
         index += 1
 
     plt.subplot(121)
-    plt.hist( speed_1_samples, bins=10, normed=True )
+    plt.hist( speed_1_samples, bins=30, normed=True )
     plt.ylabel('Probability density')
     plt.xlabel('Speed (cm/yr)')
     plt.subplot(122)
-    plt.hist( speed_2_samples, bins=10, normed=True )
+    plt.hist( speed_2_samples, bins=30, normed=True )
     plt.ylabel('Probability density')
     plt.xlabel('Speed (cm/yr)')
 
