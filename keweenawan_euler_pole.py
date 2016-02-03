@@ -65,9 +65,9 @@ for i in range(len(age)):
 model = pymc.Model( model_vars )
 mcmc = pymc.MCMC(model)
 pymc.MAP(model).fit()
-mcmc.sample(100000, 10000, 1)
+#mcmc.sample(100000, 10000, 1)
 #mcmc.sample(10000, 1000, 1)
-#mcmc.sample(1100, 100, 1)
+mcmc.sample(1100, 100, 1)
 
 euler_1_directions = mcmc.trace('euler_1')[:]
 rates_1 = mcmc.trace('rate_1')[:]
@@ -82,8 +82,10 @@ interval = int(len(rates_1)/1000)
 
 ax = plt.axes(projection = ccrs.Orthographic(60.,-10.))
 #ax = plt.axes(projection = ccrs.Mollweide(190.-180.))
-ax.scatter(euler_1_directions[:,0], euler_1_directions[:,1], transform=ccrs.PlateCarree(), color='r', edgecolors='none', alpha=0.1)
-ax.scatter(euler_2_directions[:,0], euler_2_directions[:,1], transform=ccrs.PlateCarree(), color='b', edgecolors='none', alpha=0.1)
+#ax.scatter(euler_1_directions[:,0], euler_1_directions[:,1], transform=ccrs.PlateCarree(), color='r', edgecolors='none', alpha=0.1)
+#ax.scatter(euler_2_directions[:,0], euler_2_directions[:,1], transform=ccrs.PlateCarree(), color='b', edgecolors='none', alpha=0.1)
+ax.contourf(euler_1_directions[:,0], euler_1_directions[:,1], transform=ccrs.PlateCarree(),  alpha=0.1)
+ax.contourf(euler_2_directions[:,0], euler_2_directions[:,1], transform=ccrs.PlateCarree(),  alpha=0.1)
 ax.gridlines()
 ax.set_global()
 
