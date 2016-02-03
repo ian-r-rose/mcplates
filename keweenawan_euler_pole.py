@@ -68,7 +68,7 @@ model = pymc.Model( model_vars )
 def sample_mcmc( nsample ):
     mcmc = pymc.MCMC(model, db='pickle', dbname=dbname)
     pymc.MAP(model).fit()
-    mcmc.sample(nsample)
+    mcmc.sample(nsample, int(nsample/5), 1)
     mcmc.db.close()
     return mcmc.db
 
