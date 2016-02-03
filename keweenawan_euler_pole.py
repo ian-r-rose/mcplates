@@ -23,7 +23,6 @@ slat = 46.8 # Duluth lat
 slon = 360. - 92.1 - 180. # Duluth lon
 
 start_age = max(age)
-#start_age = min(age)
 
 
 def pole_position( start, euler_1, rate_1, euler_2, rate_2, switchpoint, time ):
@@ -66,9 +65,9 @@ for i in range(len(age)):
 model = pymc.Model( model_vars )
 mcmc = pymc.MCMC(model)
 pymc.MAP(model).fit()
-#mcmc.sample(100000, 10000, 1)
-mcmc.sample(10000, 1000, 1)
-
+mcmc.sample(100000, 10000, 1)
+#mcmc.sample(10000, 1000, 1)
+#mcmc.sample(1100, 100, 1)
 
 euler_1_directions = mcmc.trace('euler_1')[:]
 rates_1 = mcmc.trace('rate_1')[:]
@@ -112,7 +111,38 @@ for lon,lat,a,c in zip(plon, plat, a95, colors):
 
 
 plt.savefig('keweenawan.pdf')
-plt.show()
+#plt.show()
 
+speed_1_samples = np.empty_like(rates_1)
+speed_2_samples = np.empty_like(rates_1)
+index = 0
 
+for start, e1, r1, e2, r2, switch \
+             in zip(start_directions, 
+                    euler_1_directions, rates_1,
+                    euler_2_directions, rates_2,
+                    switchpoints):
 
+    duluth = PlateCentroid( slon, slat )
+    euler_pole_1 = EulerPole( e1[0], e1[1], r1 )
+    euler_pole_2 = EulerPole( e2[0], e2[1], r2 )
+
+    speed_1 = euler_pole_1.speed_at_point( duluth )
+    duluth.rotate( euler_pole_1, euler_pole_1.rate * (start_age - switch))
+    speed_2 = euler_pole_2.speed_at_point( duluth )
+
+    speed_1_samples[index] = speed_1
+    speed_2_samples[index] = speed_2
+    index += 1
+
+plt.subplot(121)
+plt.hist( speed_1_samples, bins=10, normed=True )
+plt.ylabel('Probability density')
+plt.xlabel('Speed (cm/yr)')
+plt.subplot(122)
+plt.hist( speed_2_samples, bins=10, normed=True )
+plt.ylabel('Probability density')
+plt.xlabel('Speed (cm/yr)')
+
+plt.savefig('keweenawan_speeds.pdf')
+#plt.show()

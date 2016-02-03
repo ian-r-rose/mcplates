@@ -91,7 +91,7 @@ class PlateCentroid(Pole):
     plate is itself an extended object).
     """
     def __init__(self, longitude, latitude, **kwargs):
-        super(PlateCentroid, self).__init__(longitude, latitude, 1.0, **kwargs)
+        super(PlateCentroid, self).__init__(longitude, latitude, 6371.e3, **kwargs)
 
 
 class PaleomagneticPole(Pole):
@@ -125,6 +125,23 @@ class EulerPole(Pole):
 
     def angle(self, time):
         return self.rate*time
+
+    def speed_at_point( self, pole ):
+        """
+        Given a pole, calculate the speed that the pole
+        rotates around the Euler pole. This assumes that
+        the test pole has a radius equal to the radius of Earth,
+        6371.e3 meters. It returns the speed in cm/yr.
+        """
+        # Give the point the radius of the earth
+        point = pole._pole
+        point = point / np.sqrt(np.dot(point,point)) * 6371.e3
+
+        # calculate the speed
+        vel = np.cross( self._pole, point )
+        speed = np.sqrt( np.dot(vel,vel) )
+
+        return speed * Julian_year * 100.
 
 
 def two_sigma_from_kappa( kappa ):
