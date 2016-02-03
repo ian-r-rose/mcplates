@@ -73,8 +73,10 @@ def cumulative_density_distribution( lon_samples, lat_samples, resolution = 30 )
 
 def plot_distribution( ax, lon_samples, lat_samples, to_plot='d', resolution=30, **kwargs ):
 
-    c = kwargs.pop('cmap')
-    cmap = c if c is not None else next(cmaps)
+    if 'cmap' in kwargs:
+        cmap = kwargs.pop('cmap')
+    else:
+        cmap = next(cmaps)
 
     artists = []
 

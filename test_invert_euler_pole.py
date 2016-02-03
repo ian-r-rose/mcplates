@@ -82,8 +82,8 @@ def plot_trace( trace ):
     ax = plt.axes(projection = ccrs.Mollweide(0.))
     ax.gridlines()
     ax.set_global()
-    mcplates.plot.plot_distribution( ax, euler_1_directions[:,0], euler_1_directions[:,1], samples=False)
-    mcplates.plot.plot_distribution( ax, euler_2_directions[:,0], euler_2_directions[:,1] , samples=False)
+    mcplates.plot.plot_distribution( ax, euler_1_directions[:,0], euler_1_directions[:,1])
+    mcplates.plot.plot_distribution( ax, euler_2_directions[:,0], euler_2_directions[:,1])
 
     age_list = np.linspace(ages[0], ages[-1], 100)
     pathlons = np.empty_like(age_list)
