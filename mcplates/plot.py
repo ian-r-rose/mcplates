@@ -72,15 +72,14 @@ def cumulative_density_distribution( lon_samples, lat_samples, resolution = 30 )
     return lon_grid, lat_grid, hist_cumsum[i_unsort].reshape(lat_grid.shape)
 
 def plot_distribution( ax, lon_samples, lat_samples, resolution=30, samples=False, **kwargs ):
-    cmap = next(cmaps)
+
+    c = kwargs.pop('cmap')
+    cmap = c if c is not None else next(cmaps)
+
     lon_grid, lat_grid, density = density_distribution( lon_samples, lat_samples, resolution )
     density = ma.masked_where(density <= 0.0, density)
     artist = ax.pcolormesh( lon_grid, lat_grid, density, cmap=cmap,  transform=ccrs.PlateCarree(), **kwargs)
 
-    
-    #lon_grid, lat_grid, density = cumulative_density_distribution( lon_samples, lat_samples, resolution )
-    #density = ma.masked_where(density <= 0.0, density)
-    #artist = ax.contour( lon_grid, lat_grid, density, levels=[0.683, 0.955], cmap=cmap, alpha=1.0, transform=ccrs.PlateCarree(), **kwargs)
     if samples:
         ax.scatter( lon_samples, lat_samples, color = cmap([0.,0.5,1.])[-1], alpha = 0.1, transform = ccrs.PlateCarree(), edgecolors=None, **kwargs )
     

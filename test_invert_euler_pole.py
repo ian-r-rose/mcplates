@@ -6,7 +6,6 @@ import cartopy.crs as ccrs
 
 import pymc
 import mcplates
-import mcplates.rotations_numpy as rnp
 
 dbname = 'invert_euler_pole.pickle'
 
@@ -58,7 +57,7 @@ model = pymc.Model( model_vars )
 def sample_mcmc( nsample ):
     mcmc = pymc.MCMC(model, db='pickle', dbname=dbname)
     pymc.MAP(model).fit()
-    mcmc.sample(10000)
+    mcmc.sample(nsample)
     mcmc.db.close()
     return mcmc.db
 
