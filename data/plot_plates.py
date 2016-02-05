@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import ssrfpy
 import cartopy.crs as ccrs
+from scipy.stats import beta
+
+plt.style.use('ian')
 
 d2r = np.pi/180.
 r2d = 180./np.pi
@@ -78,7 +81,7 @@ while i < n_samples:
         lon_samples[i] = lon
         lat_samples[i] = lat
         z_samples[i]  = np.sin(lat*d2r)
-        val_samples[i] =  np.arccos(np.dot(x, evec))*r2d
+        val_samples[i] =  np.arccos(np.dot(x, evec))
         #val_samples[i] =  np.dot(x, evec)
         i += 1
     except KeyError:
@@ -89,10 +92,15 @@ while i < n_samples:
 #ax.scatter(lon_samples,lat_samples, c=val_samples, transform=ccrs.PlateCarree())
 #plt.colorbar(c)
 #plt.show()
-#uniform_x = np.linspace(-1., 1., 100)
-#uniform_y = np.ones_like(uniform_x)*0.5
-uniform_x = np.linspace(0., 180., 100)
-uniform_y = np.sin(uniform_x*d2r)*0.5*d2r
+uniform_x = np.linspace(-1., 1., 100)
+uniform_y = np.ones_like(uniform_x)*0.5
+beta_x = np.linspace(0.,1.,1000)
+beta_uniform = beta.pdf( beta_x, 1., 1.)
+beta_nonuniform = beta.pdf( beta_x, 3, 3)
+uniform_x = np.linspace(0., np.pi, 100)
+uniform_y = np.sin(uniform_x)*0.5
 plt.hist( val_samples, bins=10, normed=True )
-plt.plot( uniform_x, uniform_y, 'r', lw=3)
+#plt.plot( uniform_x, uniform_y, 'r', lw=3)
+#plt.plot( 2.*beta_x-1, beta_uniform/2., 'r', lw=3)
+plt.plot( 2.*beta_x-1 + np.pi/2., beta_nonuniform/2., 'r', lw=3)
 plt.show()

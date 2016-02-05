@@ -1,3 +1,3 @@
-from .von_mises_fisher import *
+from .distributions import *
 from .poles import *
 import plot

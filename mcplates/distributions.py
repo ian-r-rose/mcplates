@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.stats as st
+import scipy.special as sp
 
 import pymc
 
@@ -7,7 +8,7 @@ d2r = np.pi/180.
 r2d = 180./np.pi
 eps = 1.e-6
 
-def _vmf_random(lon_lat, kappa, size=None):
+def _vmf_random(lon_lat, kappa):
     # make the appropriate euler rotation matrix
     alpha = 0.
     beta = np.pi/2. - lon_lat[1]*d2r
@@ -72,6 +73,60 @@ def _vmf_logp(x, lon_lat, kappa):
 VonMisesFisher = pymc.stochastic_from_dist('von_mises_fisher', 
                                            logp=_vmf_logp,
                                            random=_vmf_random,
+                                           dtype=np.float,
+                                           mv=True)
+
+
+def _spherical_beta_random(lon_lat, alpha):
+    # make the appropriate euler rotation matrix
+    beta = np.pi/2. - lon_lat[1]*d2r
+    gamma = lon_lat[0]*d2r
+    rot_beta = np.array( [ [np.cos(beta), 0., np.sin(beta)],
+                           [0., 1., 0.],
+                           [-np.sin(beta), 0., np.cos(beta)] ] )
+    rot_gamma = np.array( [ [np.cos(gamma), -np.sin(gamma), 0.],
+                            [np.sin(gamma), np.cos(gamma), 0.],
+                            [0., 0., 1.] ] )
+    rotation_matrix = np.dot( rot_gamma, rot_beta )
+
+    # Generate samples around the z-axis, then rotate
+    # to the appropriate position using euler angles
+
+    # z-coordinate is determined by beta distribution
+    # with alpha=beta, shifted to go from -1 to 1
+    z = 2.*st.beta.rvs(alpha, alpha)-1.
+
+    # x and y coordinates can be determined by a 
+    # uniform distribution in longitude.
+    phi = st.uniform.rvs(loc=0., scale=2.*np.pi)
+    x = np.sqrt(1.-z*z)*np.cos(phi)
+    y = np.sqrt(1.-z*z)*np.sin(phi)
+
+    # Rotate the samples to have the correct mean direction
+    unrotated_samples = np.array([x,y,z])
+    s = np.transpose(np.dot(rotation_matrix, unrotated_samples))
+        
+    lon_lat = np.array( [np.arctan2( s[1], s[0]), np.pi/2. - np.arccos(s[2]/np.sqrt(np.dot(s,s)))] )*r2d
+    return lon_lat 
+
+def spherical_beta_logp(x, lon_lat, alpha):
+
+    xp = x.reshape((-1,2))
+    mu = np.array([ np.cos(lon_lat[1]*d2r) * np.cos(lon_lat[0]*d2r),
+                    np.cos(lon_lat[1]*d2r) * np.sin(lon_lat[0]*d2r),
+                    np.sin(lon_lat[1]*d2r) ] ) 
+    test_point = np.transpose(np.array([ np.cos(xp[:,1]*d2r) * np.cos(xp[:,0]*d2r),
+                                         np.cos(xp[:,1]*d2r) * np.sin(xp[:,0]*d2r),
+                                         np.sin(xp[:,1]*d2r) ] ))
+
+    thetas = np.arccos( np.dot(test_point,mu) )
+    normalization = sp.gamma( alpha + 0.5 )/ sp.gamma(alpha)/np.sqrt(np.pi)/np.pi/2.
+    logp_elem = np.log( np.sin(thetas))*( 2.*alpha - 2 ) + np.log(normalization)
+    return logp_elem.sum()
+
+SphericalBeta = pymc.stochastic_from_dist('spherical_beta', 
+                                           logp=spherical_beta_logp,
+                                           random=_spherical_beta_random,
                                            dtype=np.float,
                                            mv=True)
 
