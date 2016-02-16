@@ -42,9 +42,11 @@ def pole_position( start, euler_1, rate_1, euler_2, rate_2, switchpoint, time ):
     return lon_lat
 
 
-euler_1 = mcplates.VonMisesFisher('euler_1', lon_lat=(0.,0.), kappa=0.00)
+#euler_1 = mcplates.VonMisesFisher('euler_1', lon_lat=(0.,0.), kappa=0.00)
+euler_1 = mcplates.SphericalBeta('euler_1', lon_lat=(slon,slat), alpha=3.)
 rate_1 = pymc.Exponential('rate_1', 1.) 
-euler_2 = mcplates.VonMisesFisher('euler_2', lon_lat=(0.,0.), kappa=0.00)
+#euler_2 = mcplates.VonMisesFisher('euler_2', lon_lat=(0.,0.), kappa=0.00)
+euler_2 = mcplates.SphericalBeta('euler_2', lon_lat=(slon,slat), alpha=3.)
 rate_2 = pymc.Exponential('rate_2', 1.) 
 
 start = mcplates.VonMisesFisher('start', lon_lat=(plon[0], plat[0]), kappa=mcplates.kappa_from_two_sigma(a95[0]))
@@ -88,12 +90,14 @@ def plot_trace( trace ):
 
     interval = int(len(rates_1)/300)
 
-    ax = plt.axes(projection = ccrs.Orthographic(60.,-10.))
-#    ax = plt.axes(projection = ccrs.Mollweide(80.))
+    ax = plt.axes(projection = ccrs.Orthographic(70.,-10.))
+    #ax = plt.axes(projection = ccrs.Mollweide(80.))
     ax.gridlines()
     ax.set_global()
     mcplates.plot.plot_distribution( ax, euler_1_directions[:,0], euler_1_directions[:,1], cmap=mcplates.plot.cmap_red, resolution=30)
     mcplates.plot.plot_distribution( ax, euler_2_directions[:,0], euler_2_directions[:,1] , cmap=mcplates.plot.cmap_blue, resolution=30)
+    print euler_1_directions
+    print euler_2_directions
 
     age_list = np.linspace(age[0], age[-1], 100)
     pathlons = np.empty_like(age_list)

@@ -55,7 +55,7 @@ def _vmf_logp(x, lon_lat, kappa):
 
     if kappa < eps:
         return np.log(1./4./np.pi)
-    if lon_lat[1] < - 90. or lon_lat[1] > 90.:
+    if lon_lat[1] < -90. or lon_lat[1] > 90.:
         return -np.inf
 
     xp = x.reshape((-1,2))
@@ -110,6 +110,11 @@ def _spherical_beta_random(lon_lat, alpha):
     return lon_lat 
 
 def spherical_beta_logp(x, lon_lat, alpha):
+
+    if alpha == 1.0:
+        return np.log(1./4./np.pi)
+    if lon_lat[1] < -90. or lon_lat[1] > 90.:
+        return -np.inf
 
     xp = x.reshape((-1,2))
     mu = np.array([ np.cos(lon_lat[1]*d2r) * np.cos(lon_lat[0]*d2r),

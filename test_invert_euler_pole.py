@@ -111,5 +111,6 @@ if __name__ == "__main__":
     if os.path.isfile(dbname):
         db = load_mcmc()
     else:
-        mcmc = sample_mcmc(10000)
+        sample_mcmc(10000)
+        db = load_mcmc()
     plot_trace(db.trace)
