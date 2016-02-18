@@ -106,6 +106,10 @@ class PaleomagneticPole(Pole):
     def age(self):
         return self._age
 
+    @property
+    def sigma_age(self):
+        return self._sigma_age
+
 
 class EulerPole(Pole):
     """
