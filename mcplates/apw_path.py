@@ -23,6 +23,7 @@ class APWPath(object):
         self._pole_position_fn = self._generate_pole_position_fn( n_euler_poles, self._start_age )
         self._model = self._create_model()
         self.dbname = self._name + '.pickle'
+        self.db = None
 
     def _generate_pole_position_fn( self, n_euler_poles, start_age ):
 
@@ -114,11 +115,28 @@ class APWPath(object):
         self.db = pymc.database.pickle.load(self.dbname)
 
     def euler_directions(self):
+        if self.db is None:
+            raise Exception("No database loaded")
         direction_samples = []
         for i in range(self._n_euler_poles):
             direction_samples.append(self.db.trace('euler_'+str(i))[:])
         return direction_samples
-        
+
+    def euler_rates(self):
+        if self.db is None:
+            raise Exception("No database loaded")
+        rate_samples = []
+        for i in range(self._n_euler_poles):
+            rate_samples.append(self.db.trace('rate_'+str(i))[:])
+        return rate_samples
+
+    def changepoints(self):
+        if self.db is None:
+            raise Exception("No database loaded")
+        changepoint_samples = []
+        for i in range(self._n_euler_poles-1):
+            changepoint_samples.append(self.db.trace('changepoint_'+str(i))[:])
+        return changepoint_samples
 
     def compute_synthetics(self, n=100):
 
