@@ -21,8 +21,8 @@ class APWPath(object):
         
  
         self._pole_position_fn = self._generate_pole_position_fn( n_euler_poles, self._start_age )
-        self._model = self._create_model()
         self.dbname = self._name + '.pickle'
+        self._model = None
         self.db = None
 
     def _generate_pole_position_fn( self, n_euler_poles, start_age ):
@@ -57,7 +57,7 @@ class APWPath(object):
 
         return pole_position
 
-    def _create_model(self):
+    def create_model(self, site_lon_lat=[0.,0.], watson_concentration=0.):
         model_vars = []
         args = []
 
@@ -69,7 +69,7 @@ class APWPath(object):
 
         # Make Euler pole direction random variables
         for i in range(self._n_euler_poles):
-            euler = distributions.VonMisesFisher('euler_'+str(i), lon_lat=(0.,0.), kappa=0.00)
+            euler = distributions.WatsonGirdle('euler_'+str(i), lon_lat=site_lon_lat, kappa=watson_concentration)
             model_vars.append(euler)
             args.append(euler)
 
@@ -101,10 +101,11 @@ class APWPath(object):
             model_vars.append(lon_lat)
             model_vars.append(observed_pole)
 
-        model = pymc.Model( model_vars )
-        return model
+        self._model = pymc.Model( model_vars )
 
     def sample_mcmc( self, nsample=10000 ):
+        if self._model is None:
+           raise Exception("No model has been created")
         mcmc = pymc.MCMC(self._model, db='pickle', dbname=self.dbname)
         pymc.MAP(self._model).fit()
         mcmc.sample(nsample, int(nsample/5), 1)

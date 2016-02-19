@@ -3,6 +3,7 @@ import scipy.stats as st
 import scipy.special as sp
 
 import pymc
+from pymc.Node import ZeroProbability
 
 d2r = np.pi/180.
 r2d = 180./np.pi
@@ -55,8 +56,6 @@ def vmf_logp(x, lon_lat, kappa):
 
     if kappa < eps:
         return np.log(1./4./np.pi)
-    if lon_lat[1] < -90. or lon_lat[1] > 90.:
-        return -np.inf
 
     xp = x.reshape((-1,2))
     mu = np.array([ np.cos(lon_lat[1]*d2r) * np.cos(lon_lat[0]*d2r),
@@ -68,7 +67,14 @@ def vmf_logp(x, lon_lat, kappa):
 
     logp_elem = np.log( -kappa / ( 2.*np.pi * np.expm1(-2.*kappa)) ) + \
                 kappa * (np.dot(test_point,mu)-1.)
-    return logp_elem.sum()
+
+    logp_elem[np.where(xp[:,1] < -90.)] = -np.inf
+    logp_elem[np.where(xp[:,1] > 90.)] = -np.inf
+    logp = logp_elem.sum()
+    if np.isinf(logp):
+        raise pymc.ZeroProbability
+    else:
+        return logp
 
 VonMisesFisher = pymc.stochastic_from_dist('von_mises_fisher', 
                                            logp=vmf_logp,
@@ -113,8 +119,6 @@ def spherical_beta_logp(x, lon_lat, alpha):
 
     if alpha == 1.0:
         return np.log(1./4./np.pi)
-    if lon_lat[1] < -90. or lon_lat[1] > 90.:
-        return -np.inf
 
     xp = x.reshape((-1,2))
     mu = np.array([ np.cos(lon_lat[1]*d2r) * np.cos(lon_lat[0]*d2r),
@@ -127,7 +131,14 @@ def spherical_beta_logp(x, lon_lat, alpha):
     thetas = np.arccos( np.dot(test_point,mu) )
     normalization = sp.gamma( alpha + 0.5 )/ sp.gamma(alpha)/np.sqrt(np.pi)/np.pi/2.
     logp_elem = np.log( np.sin(thetas))*( 2.*alpha - 2 ) + np.log(normalization)
-    return logp_elem.sum()
+
+    logp_elem[np.where(xp[:,1] < -90.)] = -np.inf
+    logp_elem[np.where(xp[:,1] > 90.)] = -np.inf
+    logp = logp_elem.sum()
+    if np.isinf(logp):
+        raise pymc.ZeroProbability
+    else:
+        return logp
 
 SphericalBeta = pymc.stochastic_from_dist('watson', 
                                            logp=spherical_beta_logp,
@@ -154,7 +165,10 @@ def watson_girdle_random(lon_lat, kappa):
 
     # z-coordinate is determined by beta distribution
     # with alpha=beta, shifted to go from -1 to 1
-    z = 2.*st.truncnorm.rvs(a=-1., b=1., loc=0., scale = np.sqrt(-1./2./kappa))
+    if np.abs(kappa) < eps:
+        z = st.uniform.rvs(loc=-1., scale=2.)
+    else:
+        z = 2.*st.truncnorm.rvs(a=-1., b=1., loc=0., scale = np.sqrt(-1./2./kappa))
 
     # x and y coordinates can be determined by a 
     # uniform distribution in longitude.
@@ -173,8 +187,6 @@ def watson_girdle_logp(x, lon_lat, kappa):
 
     if np.abs(kappa) < eps:
         return np.log(1./4./np.pi)
-    if lon_lat[1] < -90. or lon_lat[1] > 90.:
-        return -np.inf
 
     xp = x.reshape((-1,2))
     mu = np.array([ np.cos(lon_lat[1]*d2r) * np.cos(lon_lat[0]*d2r),
@@ -187,7 +199,15 @@ def watson_girdle_logp(x, lon_lat, kappa):
     normalization = 1./sp.hyp1f1(0.5, 1.5, kappa)/4./np.pi
     logp_elem = np.log( normalization ) + \
                 kappa * (np.dot(test_point,mu)**2.)
-    return logp_elem.sum()
+
+    logp_elem[np.where(xp[:,1] < -90.)] = -np.inf
+    logp_elem[np.where(xp[:,1] > 90.)] = -np.inf
+    logp = logp_elem.sum()
+    if np.isinf(logp):
+        raise pymc.ZeroProbability
+    else:
+        return logp
+
 
 WatsonGirdle = pymc.stochastic_from_dist('watson_girdle', 
                                           logp=watson_girdle_logp,

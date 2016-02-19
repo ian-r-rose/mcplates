@@ -21,6 +21,7 @@ for a, s, ll in zip(ages, sigma_ages, lon_lats):
     poles.append(pole)
 
 path = mcplates.APWPath( 'apw', poles, 2 )
+path.create_model()
 
 def plot_result( trace ):
 
@@ -32,7 +33,6 @@ def plot_result( trace ):
     direction_samples = path.euler_directions()
     for directions in direction_samples:
         mcplates.plot.plot_distribution( ax, directions[:,0], directions[:,1])
-
 
     pathlons, pathlats = path.compute_synthetics(n=100)
     for pathlon,pathlat in zip(pathlons,pathlats):
