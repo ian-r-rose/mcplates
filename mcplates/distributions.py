@@ -8,7 +8,7 @@ d2r = np.pi/180.
 r2d = 180./np.pi
 eps = 1.e-6
 
-def _vmf_random(lon_lat, kappa):
+def vmf_random(lon_lat, kappa):
     # make the appropriate euler rotation matrix
     alpha = 0.
     beta = np.pi/2. - lon_lat[1]*d2r
@@ -51,7 +51,7 @@ def _vmf_random(lon_lat, kappa):
     lon_lat = np.array( [np.arctan2( s[1], s[0]), np.pi/2. - np.arccos(s[2]/np.sqrt(np.dot(s,s)))] )*r2d
     return lon_lat 
 
-def _vmf_logp(x, lon_lat, kappa):
+def vmf_logp(x, lon_lat, kappa):
 
     if kappa < eps:
         return np.log(1./4./np.pi)
@@ -71,13 +71,13 @@ def _vmf_logp(x, lon_lat, kappa):
     return logp_elem.sum()
 
 VonMisesFisher = pymc.stochastic_from_dist('von_mises_fisher', 
-                                           logp=_vmf_logp,
-                                           random=_vmf_random,
+                                           logp=vmf_logp,
+                                           random=vmf_random,
                                            dtype=np.float,
                                            mv=True)
 
 
-def _spherical_beta_random(lon_lat, alpha):
+def spherical_beta_random(lon_lat, alpha):
     # make the appropriate euler rotation matrix
     beta = np.pi/2. - lon_lat[1]*d2r
     gamma = lon_lat[0]*d2r
@@ -129,10 +129,68 @@ def spherical_beta_logp(x, lon_lat, alpha):
     logp_elem = np.log( np.sin(thetas))*( 2.*alpha - 2 ) + np.log(normalization)
     return logp_elem.sum()
 
-SphericalBeta = pymc.stochastic_from_dist('spherical_beta', 
+SphericalBeta = pymc.stochastic_from_dist('watson', 
                                            logp=spherical_beta_logp,
-                                           random=_spherical_beta_random,
+                                           random=spherical_beta_random,
                                            dtype=np.float,
                                            mv=True)
 
 
+
+def watson_girdle_random(lon_lat, kappa):
+    # make the appropriate euler rotation matrix
+    beta = np.pi/2. - lon_lat[1]*d2r
+    gamma = lon_lat[0]*d2r
+    rot_beta = np.array( [ [np.cos(beta), 0., np.sin(beta)],
+                           [0., 1., 0.],
+                           [-np.sin(beta), 0., np.cos(beta)] ] )
+    rot_gamma = np.array( [ [np.cos(gamma), -np.sin(gamma), 0.],
+                            [np.sin(gamma), np.cos(gamma), 0.],
+                            [0., 0., 1.] ] )
+    rotation_matrix = np.dot( rot_gamma, rot_beta )
+
+    # Generate samples around the z-axis, then rotate
+    # to the appropriate position using euler angles
+
+    # z-coordinate is determined by beta distribution
+    # with alpha=beta, shifted to go from -1 to 1
+    z = 2.*st.truncnorm.rvs(a=-1., b=1., loc=0., scale = np.sqrt(-1./2./kappa))
+
+    # x and y coordinates can be determined by a 
+    # uniform distribution in longitude.
+    phi = st.uniform.rvs(loc=0., scale=2.*np.pi)
+    x = np.sqrt(1.-z*z)*np.cos(phi)
+    y = np.sqrt(1.-z*z)*np.sin(phi)
+
+    # Rotate the samples to have the correct mean direction
+    unrotated_samples = np.array([x,y,z])
+    s = np.transpose(np.dot(rotation_matrix, unrotated_samples))
+        
+    lon_lat = np.array( [np.arctan2( s[1], s[0]), np.pi/2. - np.arccos(s[2]/np.sqrt(np.dot(s,s)))] )*r2d
+    return lon_lat 
+
+def watson_girdle_logp(x, lon_lat, kappa):
+
+    if np.abs(kappa) < eps:
+        return np.log(1./4./np.pi)
+    if lon_lat[1] < -90. or lon_lat[1] > 90.:
+        return -np.inf
+
+    xp = x.reshape((-1,2))
+    mu = np.array([ np.cos(lon_lat[1]*d2r) * np.cos(lon_lat[0]*d2r),
+                    np.cos(lon_lat[1]*d2r) * np.sin(lon_lat[0]*d2r),
+                    np.sin(lon_lat[1]*d2r) ] ) 
+    test_point = np.transpose(np.array([ np.cos(xp[:,1]*d2r) * np.cos(xp[:,0]*d2r),
+                                         np.cos(xp[:,1]*d2r) * np.sin(xp[:,0]*d2r),
+                                         np.sin(xp[:,1]*d2r) ] ))
+
+    normalization = 1./sp.hyp1f1(0.5, 1.5, kappa)/4./np.pi
+    logp_elem = np.log( normalization ) + \
+                kappa * (np.dot(test_point,mu)**2.)
+    return logp_elem.sum()
+
+WatsonGirdle = pymc.stochastic_from_dist('watson_girdle', 
+                                          logp=watson_girdle_logp,
+                                          random=watson_girdle_random,
+                                          dtype=np.float,
+                                          mv=True)
