@@ -1,1 +1,4 @@
 *.pyc
+*.pickle
+*.pdf
+*.png
