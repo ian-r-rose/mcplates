@@ -7,7 +7,7 @@ import cartopy.crs as ccrs
 import pymc
 import mcplates
 
-dbname = 'apw.pickle'
+dbname = 'pickles/apw.pickle'
 
 # Generate a synthetic data set
 ages =[0.,10.,20.,30.,40]

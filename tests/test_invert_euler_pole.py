@@ -7,7 +7,7 @@ import cartopy.crs as ccrs
 import pymc
 import mcplates
 
-dbname = 'invert_euler_pole.pickle'
+dbname = 'pickles/invert_euler_pole.pickle'
 
 # Generate a synthetic data set
 ages =[0.,10.,20.,30.,40]
@@ -76,7 +76,7 @@ def plot_trace( trace ):
     start_directions = trace('start')[:]
     switchpoints = trace('switchpoint')[:]
 
-    interval = int(len(rates_1)/1000)
+    interval = max([1,int(len(rates_1)/1000)])
 
     #ax = plt.axes(projection = ccrs.Orthographic(0.,30.))
     ax = plt.axes(projection = ccrs.Mollweide(0.))
