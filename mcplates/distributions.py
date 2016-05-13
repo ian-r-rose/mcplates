@@ -168,7 +168,9 @@ def watson_girdle_random(lon_lat, kappa):
     if np.abs(kappa) < eps:
         z = st.uniform.rvs(loc=-1., scale=2.)
     else:
-        z = 2.*st.truncnorm.rvs(a=-1., b=1., loc=0., scale = np.sqrt(-1./2./kappa))
+        sigma = np.sqrt(-1./2./kappa)
+        mu = 0.0
+        z = st.truncnorm.rvs(a=(-1. - mu)/sigma, b=(1.-mu)/sigma, loc=0., scale = sigma)
 
     # x and y coordinates can be determined by a 
     # uniform distribution in longitude.
