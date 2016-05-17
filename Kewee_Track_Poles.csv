@@ -1,9 +1,0 @@
-ID,name,type,pole_lat,pole_lon,A_95,N,polarity,age,age_info,age_error,pmag_ref,age_ref,plot_color
-Osler_R1,Osler reverse (lower portion),extrusive,40.9,218.6,4.8,30,reversed,1108,>1105.3 older than Osler_R2,,"Halls, 1974; Swanson-Hysell et al., 2014",,#da1800
-Osler_R2,Osler reverse (upper portion),extrusive,42.5,201.6,3.7,59,reversed,1105.3,207Pb/206Pb date on Agate Point rhyo...,2.1,"Halls, 1974; Swanson-Hysell et al., 2014","Davis and Green, 1997",#da1800
-MP_lowerR1,Mamainse Point lower R 1,extrusive,49.5,227,5.3,24,reversed,1109,older than 1107 ± 2 Ma; based on comparison wi...,NaN,"Swanson-Hysell et al., 2014a",,#da1800
-MP_lowerNupperR,Mamainse Point lower N and upper R,extrusive,36.1,189.7,4.9,24,mixed,1100.4,age based on 206Pb/238U date from ...,0.3,"Swanson-Hysell et al., 2014a","Swanson-Hysell et al., 2014a",#e50034
-MP_upperN,Mamainse Point upper N (all),extrusive,31.2,183.2,2.5,34,normal,1097,NaN,NaN,"Swanson-Hysell et al., 2014a",,#2B99FF
-NSVG SW limb,NSVG SW limb,extrusive,35.8,182.1,3.1,47,normal,1097,between the 1098.4±1.9 and 1096.6±1.7 207...,NaN,Tauxe and Kodama (2009),"Davis and Green, 1997",#194dff
-Portage Lake Volcanics,Portage Lake Volcanics,extrusive,26.5,184.8,3.1,64,normal,1093,new date,NaN,"Hnat et al., 2006; Kulakov, 2014",this study,#194dff
-LST,Lake Shore Traps,extrusive,23.2,185.5,3.3,49,normal,1087,,NaN,Palmer and Davis (1997),,#194dff
