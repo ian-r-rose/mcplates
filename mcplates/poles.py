@@ -74,7 +74,7 @@ class Pole(object):
             rotated_vecs = np.dot(rotation_matrix, vecs)
             lons,lats,norms = rot.cartesian_to_spherical(rotated_vecs)
             path= matplotlib.path.Path( np.transpose(np.array([lons,lats])))
-            circ_patch = matplotlib.patches.PathPatch(path, transform=ccrs.PlateCarree(), alpha=0.2, **kwargs) 
+            circ_patch = matplotlib.patches.PathPatch(path, transform=ccrs.PlateCarree(), alpha=0.5, **kwargs) 
             circ_artist = axes.add_patch(circ_patch) 
             artists.append(circ_artist)
         artist = axes.scatter(self.longitude,self.latitude, transform=ccrs.PlateCarree(), **kwargs)
@@ -98,9 +98,21 @@ class PaleomagneticPole(Pole):
     plate is itself an extended object).
     """
     def __init__(self, longitude, latitude, age=0., sigma_age=0.0, **kwargs):
+
+        if np.iterable(sigma_age) == 1:
+            assert len(sigma_age)==2 # upper and lower bounds
+            self._age_type = 'uniform'
+        else:
+            self._age_type = 'gaussian'
+
         self._age = age
         self._sigma_age = sigma_age
+
         super(PaleomagneticPole, self).__init__(longitude, latitude, 1.0, **kwargs)
+
+    @property
+    def age_type(self):
+        return self._age_type
 
     @property
     def age(self):

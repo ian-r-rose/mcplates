@@ -11,13 +11,13 @@ dbname = 'pickles/apw.pickle'
 
 # Generate a synthetic data set
 ages =[0.,10.,20.,30.,40]
-sigma_ages = np.array([2., 2., 2., 2., 2.])
-age_taus = 1./sigma_ages*sigma_ages
+sigma_ages = [2., 2., 2., 2., [38.,43.]]
+
 lon_lats = [ [300., -20.], [340.,0.], [0.,30.], [20., 0.], [60.,-20.]]
 
 poles = []
 for a, s, ll in zip(ages, sigma_ages, lon_lats):
-    pole = mcplates.PaleomagneticPole( ll[0], ll[1], angular_error=10., age=a, sigma_age=s) 
+    pole = mcplates.PaleomagneticPole( ll[0], ll[1], angular_error=10., age=a, sigma_age=s)
     poles.append(pole)
 
 path = mcplates.APWPath( 'apw', poles, 2 )

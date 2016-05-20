@@ -15,7 +15,7 @@ class APWPath(object):
         self._poles = paleomagnetic_pole_list
         self._n_euler_poles = n_euler_poles
 
-        age_list = np.array([p.age for p in self._poles])
+        age_list = [p.age for p in self._poles]
         self._start_age = max(age_list)
         self._start_pole = self._poles[np.argmax(age_list)]
         
@@ -88,7 +88,11 @@ class APWPath(object):
 
         # Make observed random variables
         for i,p in enumerate(self._poles):
-            pole_age = pymc.Normal('a_'+str(i), mu=p.age, tau=np.power(p.sigma_age, -2.))
+            if p.age_type == 'gaussian':
+                pole_age = pymc.Normal('a_'+str(i), mu=p.age, tau=np.power(p.sigma_age, -2.))
+            elif p.age_type == 'uniform':
+                pole_age = pymc.Uniform('a_'+str(i), lower=p.sigma_age[0], upper=p.sigma_age[1])
+
             lon_lat = pymc.Lambda('ll_'+str(i), lambda st=start, a=pole_age, args=args : \
                                                       self._pole_position_fn(st, a, *args ),\
                                                       dtype=np.float, trace=False, plot=False)
@@ -139,7 +143,60 @@ class APWPath(object):
             changepoint_samples.append(self.db.trace('changepoint_'+str(i))[:])
         return changepoint_samples
 
-    def compute_synthetics(self, n=100):
+    def ages(self):
+        if self.db is None:
+            raise Exception("No database loaded")
+        age_samples = []
+        for i in range(len(self._poles)):
+            age_samples.append(self.db.trace('a_'+str(i))[:])
+        return age_samples
+
+    def compute_synthetic_poles(self, n=0):
+
+        if n <= 0:
+            interval = 1
+        else:
+            interval = int(len( self.db.trace('rate_0')[:])/n)
+        assert(interval > 0)
+
+        n_poles = len(self._poles)
+        lats = np.zeros( (n, n_poles) )
+        lons = np.zeros( (n, n_poles) )
+        ages = np.zeros( (n, n_poles) )
+
+        index = 0
+        for i in range(n):
+
+            #begin args list with placeholder for age
+            args = [self.db.trace('start')[index], 0.0]
+
+            #add the euler pole direction arguments
+            for j in range(self._n_euler_poles):
+                euler = self.db.trace('euler_'+str(j))[index]
+                args.append(euler)
+
+            #add the euler pole rate arguments
+            for j in range(self._n_euler_poles):
+                rate = self.db.trace('rate_'+str(j))[index]
+                args.append(rate)
+
+            #add the switchpoint arguments
+            for j in range(self._n_euler_poles-1):
+                changepoint = self.db.trace('changepoint_'+str(j))[index]
+                args.append(changepoint)
+
+            for j,a in enumerate(self._poles):
+                args[1] = self.db.trace('a_'+str(j))[index]  #put in the relevant age
+                lon_lat = self._pole_position_fn( *args )
+                lons[i,j] = lon_lat[0]
+                lats[i,j] = lon_lat[1]
+                ages[i,j] = args[1]
+
+            index += interval
+
+        return lons, lats, ages
+
+    def compute_synthetic_paths(self, n=100):
 
         interval = int(len( self.db.trace('rate_0')[:])/n)
         assert(interval > 0)
