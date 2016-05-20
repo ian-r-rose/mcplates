@@ -151,12 +151,10 @@ class APWPath(object):
             age_samples.append(self.db.trace('a_'+str(i))[:])
         return age_samples
 
-    def compute_synthetic_poles(self, n=0):
+    def compute_synthetic_poles(self, n = 100):
 
-        if n <= 0:
-            interval = 1
-        else:
-            interval = int(len( self.db.trace('rate_0')[:])/n)
+        assert n <= len(self.db.trace('rate_0')[:]) and n >= 1, "Number of requested samples is not in allowable range"
+        interval = max(1, int(len( self.db.trace('rate_0')[:])/n))
         assert(interval > 0)
 
         n_poles = len(self._poles)
@@ -198,7 +196,8 @@ class APWPath(object):
 
     def compute_synthetic_paths(self, n=100):
 
-        interval = int(len( self.db.trace('rate_0')[:])/n)
+        assert n <= len(self.db.trace('rate_0')[:]) and n >= 1, "Number of requested samples is not in allowable range"
+        interval = max(1, int(len( self.db.trace('rate_0')[:])/n))
         assert(interval > 0)
 
         n_segments = 100
