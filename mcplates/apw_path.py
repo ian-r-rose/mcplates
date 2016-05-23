@@ -22,8 +22,8 @@ class APWPath(object):
         self._pole_position_fn = self._generate_pole_position_fn(
             n_euler_poles, self._start_age)
         self.dbname = self._name + '.pickle'
-        self._model = None
-        self.db = None
+        self.model = None
+        self.mcmc = None
 
     def _generate_pole_position_fn(self, n_euler_poles, start_age):
 
@@ -114,58 +114,59 @@ class APWPath(object):
             model_vars.append(lon_lat)
             model_vars.append(observed_pole)
 
-        self._model = pymc.Model(model_vars)
+        self.model = pymc.Model(model_vars)
 
     def sample_mcmc(self, nsample=10000):
-        if self._model is None:
+        if self.model is None:
             raise Exception("No model has been created")
-        mcmc = pymc.MCMC(self._model, db='pickle', dbname=self.dbname)
-        pymc.MAP(self._model).fit()
-        mcmc.sample(nsample, int(nsample / 5), 1)
-        mcmc.db.close()
+        self.mcmc = pymc.MCMC(self.model, db='pickle', dbname=self.dbname)
+        pymc.MAP(self.model).fit()
+        self.mcmc.sample(nsample, int(nsample / 5), 1)
+        self.mcmc.db.close()
         self.load_mcmc()
 
     def load_mcmc(self):
-        self.db = pymc.database.pickle.load(self.dbname)
+        self.mcmc = pymc.MCMC(self.model, db='pickle', dbname=self.dbname)
+        self.mcmc.db = pymc.database.pickle.load(self.dbname)
 
     def euler_directions(self):
-        if self.db is None:
+        if self.mcmc.db is None:
             raise Exception("No database loaded")
         direction_samples = []
         for i in range(self._n_euler_poles):
-            direction_samples.append(self.db.trace('euler_' + str(i))[:])
+            direction_samples.append(self.mcmc.db.trace('euler_' + str(i))[:])
         return direction_samples
 
     def euler_rates(self):
-        if self.db is None:
+        if self.mcmc.db is None:
             raise Exception("No database loaded")
         rate_samples = []
         for i in range(self._n_euler_poles):
-            rate_samples.append(self.db.trace('rate_' + str(i))[:])
+            rate_samples.append(self.mcmc.db.trace('rate_' + str(i))[:])
         return rate_samples
 
     def changepoints(self):
-        if self.db is None:
+        if self.mcmc.db is None:
             raise Exception("No database loaded")
         changepoint_samples = []
         for i in range(self._n_euler_poles - 1):
             changepoint_samples.append(
-                self.db.trace('changepoint_' + str(i))[:])
+                self.mcmc.db.trace('changepoint_' + str(i))[:])
         return changepoint_samples
 
     def ages(self):
-        if self.db is None:
+        if self.mcmc.db is None:
             raise Exception("No database loaded")
         age_samples = []
         for i in range(len(self._poles)):
-            age_samples.append(self.db.trace('a_' + str(i))[:])
+            age_samples.append(self.mcmc.db.trace('a_' + str(i))[:])
         return age_samples
 
     def compute_synthetic_poles(self, n=100):
 
-        assert n <= len(self.db.trace('rate_0')[
+        assert n <= len(self.mcmc.db.trace('rate_0')[
                         :]) and n >= 1, "Number of requested samples is not in allowable range"
-        interval = max(1, int(len(self.db.trace('rate_0')[:]) / n))
+        interval = max(1, int(len(self.mcmc.db.trace('rate_0')[:]) / n))
         assert(interval > 0)
 
         n_poles = len(self._poles)
@@ -177,26 +178,26 @@ class APWPath(object):
         for i in range(n):
 
             # begin args list with placeholder for age
-            args = [self.db.trace('start')[index], 0.0]
+            args = [self.mcmc.db.trace('start')[index], 0.0]
 
             # add the euler pole direction arguments
             for j in range(self._n_euler_poles):
-                euler = self.db.trace('euler_' + str(j))[index]
+                euler = self.mcmc.db.trace('euler_' + str(j))[index]
                 args.append(euler)
 
             # add the euler pole rate arguments
             for j in range(self._n_euler_poles):
-                rate = self.db.trace('rate_' + str(j))[index]
+                rate = self.mcmc.db.trace('rate_' + str(j))[index]
                 args.append(rate)
 
             # add the switchpoint arguments
             for j in range(self._n_euler_poles - 1):
-                changepoint = self.db.trace('changepoint_' + str(j))[index]
+                changepoint = self.mcmc.db.trace('changepoint_' + str(j))[index]
                 args.append(changepoint)
 
             for j, a in enumerate(self._poles):
                 # put in the relevant age
-                args[1] = self.db.trace('a_' + str(j))[index]
+                args[1] = self.mcmc.db.trace('a_' + str(j))[index]
                 lon_lat = self._pole_position_fn(*args)
                 lons[i, j] = lon_lat[0]
                 lats[i, j] = lon_lat[1]
@@ -208,9 +209,9 @@ class APWPath(object):
 
     def compute_synthetic_paths(self, n=100):
 
-        assert n <= len(self.db.trace('rate_0')[
+        assert n <= len(self.mcmc.db.trace('rate_0')[
                         :]) and n >= 1, "Number of requested samples is not in allowable range"
-        interval = max(1, int(len(self.db.trace('rate_0')[:]) / n))
+        interval = max(1, int(len(self.mcmc.db.trace('rate_0')[:]) / n))
         assert(interval > 0)
 
         n_segments = 100
@@ -222,21 +223,21 @@ class APWPath(object):
         index = 0
         for i in range(n):
             # begin args list with placeholder for age
-            args = [self.db.trace('start')[index], 0.0]
+            args = [self.mcmc.db.trace('start')[index], 0.0]
 
             # add the euler pole direction arguments
             for j in range(self._n_euler_poles):
-                euler = self.db.trace('euler_' + str(j))[index]
+                euler = self.mcmc.db.trace('euler_' + str(j))[index]
                 args.append(euler)
 
             # add the euler pole rate arguments
             for j in range(self._n_euler_poles):
-                rate = self.db.trace('rate_' + str(j))[index]
+                rate = self.mcmc.db.trace('rate_' + str(j))[index]
                 args.append(rate)
 
             # add the switchpoint arguments
             for j in range(self._n_euler_poles - 1):
-                changepoint = self.db.trace('changepoint_' + str(j))[index]
+                changepoint = self.mcmc.db.trace('changepoint_' + str(j))[index]
                 args.append(changepoint)
 
             for j, a in enumerate(ages):
