@@ -1,11 +1,15 @@
 from itertools import cycle
+import pkgutil
 import numpy as np
 import numpy.ma as ma
+
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
 import cartopy.crs as ccrs
 from numba import jit
+
+from .poles import Pole
 
 cmap_green = LinearSegmentedColormap.from_list('vphi', [(0, '#ffffff'), (0.2, '#edf8e9'), (
     0.4, '#bae4b3'), (0.6, '#74c476'), (0.8, '#31a354'), (1.0, '#006d2c')], gamma=0.5)
@@ -19,6 +23,23 @@ cmap_red = LinearSegmentedColormap.from_list('vphi', [(0, '#ffffff'), (0.2, '#fe
 cmap_red.set_bad('w', alpha=0.0)
 
 cmaps = cycle([cmap_red, cmap_green, cmap_blue])
+
+
+continent_dictionary = { 'africa': 'af.asc',
+        'australia' : 'aus.asc',
+        'congo' : 'congo.asc',
+        'gondwana' : 'gond.asc',
+        'india' : 'ind.asc',
+        'laurentia' : 'lau.asc',
+        'plates' : 'plates.asc',
+        'west africa' : 'waf.asc',
+        'antarctica' : 'ant.asc',
+        'baltica' : 'balt.asc',
+        'europe' : 'eur.asc',
+        'greenland' : 'grn.asc',
+        'kala' : 'kala.asc',
+        'north america' : 'nam.asc',
+        'south america' : 'sam.asc' }
 
 
 def bin_trace(lon_samples, lat_samples, resolution):
@@ -106,3 +127,33 @@ def plot_distribution(ax, lon_samples, lat_samples, to_plot='d', resolution=30, 
         artists.append(a)
 
     return artists
+
+def plot_continent( ax, name, rotation_pole=None, angle=0.,  **kwargs):
+    # Load the lat/lon file
+    datastream = pkgutil.get_data('mcplates', 'data/continents/' + continent_dictionary[name]) 
+    datalines = [line.strip()
+                 for line in datastream.decode('ascii').split('\n') if line.strip()]
+
+    # Parse the file
+    lon_lat = []
+    for line in datalines:
+        lon,lat = float(line.split()[1]), float(line.split()[0])
+        if np.abs(lon-1000.0) < 1.e-6 or np.abs( lon ) + np.abs(lat) < 1.e-6:
+            lon_lat.append( [np.nan, np.nan] ) # nans break up line segments
+        else:
+            lon = lon if lon < 180. else lon-360.
+            lon_lat.append( [lon,lat] )
+
+    # If the user has included an Euler rotation, do that.
+    if rotation_pole is not None:
+        for i, ll in enumerate(lon_lat):
+            pole = Pole(ll[0], ll[1], 1.0)
+            pole.rotate( rotation_pole, angle )
+            lon_lat[i][0] = pole.longitude
+            lon_lat[i][1] = pole.latitude
+
+    lon_lat = np.array(lon_lat)
+    # Sometimes the last point messes up the plot (for reasons I don't understand).
+    # Just exclude it.
+    artist = ax.plot( lon_lat[:-1,0], lon_lat[:-1,1] , transform=ccrs.PlateCarree(), **kwargs)
+    return artist
