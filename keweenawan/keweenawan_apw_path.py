@@ -7,6 +7,7 @@ import cartopy.crs as ccrs
 
 import mcplates
 
+lon_shift = 180.
 colors = ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99', '#e31a1c',
           '#fdbf6f', '#ff7f00', '#cab2d6', '#6a3d9a', '#ffff99', '#b15928']
 
@@ -14,12 +15,12 @@ data = pd.read_csv("pole_means.csv")
 # Give unnamed column an appropriate name
 data.rename(columns={'Unnamed: 14': 'GaussianOrUniform'}, inplace=True)
 data.drop(2, inplace=True, axis=0)  # Remove data row with huge uncertainty
-data.sort('AgeNominal', ascending=False, inplace=True)
+data.sort_values('AgeNominal', ascending=False, inplace=True)
 
 poles = []
 for i, row in data.iterrows():
     pole_lat = row['PLat']
-    pole_lon = row['PLon'] - 180.
+    pole_lon = row['PLon'] - lon_shift
     a95 = row['A95']
     age = row['AgeNominal']
 
@@ -35,7 +36,7 @@ for i, row in data.iterrows():
     poles.append(pole)
 
 slat = 46.8  # Duluth lat
-slon = 360. - 92.1 - 180.  # Duluth lon
+slon = 360. - 92.1 - lon_shift  # Duluth lon
 
 n_euler_rotations = 3
 path = mcplates.APWPath(
@@ -54,6 +55,8 @@ def plot_synthetic_paths():
 
     for directions in direction_samples:
         mcplates.plot.plot_distribution(ax, directions[:, 0], directions[:, 1])
+
+    mcplates.plot.plot_continent(ax, 'laurentia', rotation_pole=mcplates.Pole(0., 90., 1.0), angle=-lon_shift, color='k')
 
     pathlons, pathlats = path.compute_synthetic_paths(n=1000)
     for pathlon, pathlat in zip(pathlons, pathlats):
@@ -87,17 +90,17 @@ def plot_age_samples():
 
 
 def plot_synthetic_poles():
-    #ax = plt.axes(projection = ccrs.Orthographic(20., 30.))
-    ax = plt.axes(projection=ccrs.Mollweide(0.))
+    ax = plt.axes(projection = ccrs.Orthographic(20., 30.))
+    #ax = plt.axes(projection=ccrs.Mollweide(0.))
     ax.gridlines()
     ax.set_global()
 
     direction_samples = path.euler_directions()
 
     for directions in direction_samples:
-        #mcplates.plot.plot_distribution( ax, directions[:,0], directions[:,1])
-        ax.scatter(np.mean(directions[:, 0]), np.mean(
-            directions[:, 1]), marker="*", s=100, transform=ccrs.PlateCarree())
+        mcplates.plot.plot_distribution( ax, directions[:,0], directions[:,1])
+
+    mcplates.plot.plot_continent(ax, 'laurentia', rotation_pole=mcplates.Pole(0., 90., 1.0), angle=-lon_shift, color='k')
 
     colorcycle = itertools.cycle(colors)
     lons, lats, ages = path.compute_synthetic_poles(n=1000)
@@ -124,10 +127,10 @@ def plot_plate_speeds():
                 directions[j, 0], directions[j, 1], rates[j])
             speed_samples[j] = euler.speed_at_point(duluth)
 
-        ax = fig.add_subplot(2, n_euler_rotations, i)
+        ax = fig.add_subplot(1, n_euler_rotations, i)
         ax.hist(speed_samples, bins=30, normed=True)
-        ax = fig.add_subplot(2, n_euler_rotations, n_euler_rotations + i)
-        ax.hist(rates, bins=30, normed=True)
+        #ax = fig.add_subplot(2, n_euler_rotations, n_euler_rotations + i)
+        #ax.hist(rates, bins=30, normed=True)
         i += 1
     plt.show()
 
