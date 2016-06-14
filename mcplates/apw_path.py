@@ -3,6 +3,7 @@ import pymc
 
 from . import poles
 from . import distributions
+from . import rotations
 
 
 class APWPath(object):
@@ -138,7 +139,9 @@ class APWPath(object):
             raise Exception("No database loaded")
         direction_samples = []
         for i in range(self._n_euler_poles):
-            direction_samples.append(self.mcmc.db.trace('euler_' + str(i))[:])
+            samples = self.mcmc.db.trace('euler_' + str(i))[:]
+            samples[:,0] = rotations.clamp_longitude( samples[:,0])
+            direction_samples.append(samples)
         return direction_samples
 
     def euler_rates(self):

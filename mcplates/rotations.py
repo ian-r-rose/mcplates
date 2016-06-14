@@ -55,3 +55,10 @@ def cartesian_to_spherical(vecs):
     latitude = 90. - np.arccos(v[2, :] / norm) * r2d
     longitude = np.arctan2(v[1, :], v[0, :]) * r2d
     return longitude, latitude, norm
+
+def clamp_longitude( lons ):
+    lons = np.asarray(lons)
+    lons = np.fmod(lons, 360.)
+    lons[np.where(lons < -180.)] += 360.
+    lons[np.where(lons > 180.)] -= 360.
+    return lons
