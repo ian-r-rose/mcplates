@@ -58,28 +58,26 @@ def vmf_random(lon_lat, kappa):
 
 def vmf_logp(x, lon_lat, kappa):
 
+    if x[1] < -90. or x[1] > 90.:
+        raise ZeroProbability
+        return -np.inf
+
     if kappa < eps:
         return np.log(1. / 4. / np.pi)
 
-    xp = x.reshape((-1, 2))
     mu = np.array([np.cos(lon_lat[1] * d2r) * np.cos(lon_lat[0] * d2r),
                    np.cos(lon_lat[1] * d2r) * np.sin(lon_lat[0] * d2r),
                    np.sin(lon_lat[1] * d2r)])
-    test_point = np.transpose(np.array([np.cos(xp[:, 1] * d2r) * np.cos(xp[:, 0] * d2r),
-                                        np.cos(xp[:, 1] * d2r) *
-                                        np.sin(xp[:, 0] * d2r),
-                                        np.sin(xp[:, 1] * d2r)]))
+    test_point = np.transpose(np.array([np.cos(x[1] * d2r) * np.cos(x[0] * d2r),
+                                        np.cos(x[1] * d2r) *
+                                        np.sin(x[0] * d2r),
+                                        np.sin(x[1] * d2r)]))
 
     logp_elem = np.log( -kappa / ( 2. * np.pi * np.expm1(-2. * kappa)) ) + \
         kappa * (np.dot(test_point, mu) - 1.)
 
-    logp_elem[np.where(xp[:, 1] < -90.)] = -np.inf
-    logp_elem[np.where(xp[:, 1] > 90.)] = -np.inf
     logp = logp_elem.sum()
-    if np.isinf(logp):
-        raise pymc.ZeroProbability
-    else:
-        return logp
+    return logp
 
 VonMisesFisher = pymc.stochastic_from_dist('von_mises_fisher',
                                            logp=vmf_logp,
@@ -124,17 +122,20 @@ def spherical_beta_random(lon_lat, alpha):
 
 def spherical_beta_logp(x, lon_lat, alpha):
 
+    if x[1] < -90. or x[1] > 90.:
+        raise ZeroProbability
+        return -np.inf
+
     if alpha == 1.0:
         return np.log(1. / 4. / np.pi)
 
-    xp = x.reshape((-1, 2))
     mu = np.array([np.cos(lon_lat[1] * d2r) * np.cos(lon_lat[0] * d2r),
                    np.cos(lon_lat[1] * d2r) * np.sin(lon_lat[0] * d2r),
                    np.sin(lon_lat[1] * d2r)])
-    test_point = np.transpose(np.array([np.cos(xp[:, 1] * d2r) * np.cos(xp[:, 0] * d2r),
-                                        np.cos(xp[:, 1] * d2r) *
-                                        np.sin(xp[:, 0] * d2r),
-                                        np.sin(xp[:, 1] * d2r)]))
+    test_point = np.transpose(np.array([np.cos(x[1] * d2r) * np.cos(x[0] * d2r),
+                                        np.cos(x[1] * d2r) *
+                                        np.sin(x[0] * d2r),
+                                        np.sin(x[1] * d2r)]))
 
     thetas = np.arccos(np.dot(test_point, mu))
     normalization = sp.gamma(alpha + 0.5) / \
@@ -142,13 +143,8 @@ def spherical_beta_logp(x, lon_lat, alpha):
     logp_elem = np.log(np.sin(thetas)) * (2. * alpha - 2) + \
         np.log(normalization)
 
-    logp_elem[np.where(xp[:, 1] < -90.)] = -np.inf
-    logp_elem[np.where(xp[:, 1] > 90.)] = -np.inf
     logp = logp_elem.sum()
-    if np.isinf(logp):
-        raise pymc.ZeroProbability
-    else:
-        return logp
+    return logp
 
 SphericalBeta = pymc.stochastic_from_dist('watson',
                                           logp=spherical_beta_logp,
@@ -199,29 +195,27 @@ def watson_girdle_random(lon_lat, kappa):
 
 def watson_girdle_logp(x, lon_lat, kappa):
 
+    if x[1] < -90. or x[1] > 90.:
+        raise ZeroProbability
+        return -np.inf
+
     if np.abs(kappa) < eps:
         return np.log(1. / 4. / np.pi)
 
-    xp = x.reshape((-1, 2))
     mu = np.array([np.cos(lon_lat[1] * d2r) * np.cos(lon_lat[0] * d2r),
                    np.cos(lon_lat[1] * d2r) * np.sin(lon_lat[0] * d2r),
                    np.sin(lon_lat[1] * d2r)])
-    test_point = np.transpose(np.array([np.cos(xp[:, 1] * d2r) * np.cos(xp[:, 0] * d2r),
-                                        np.cos(xp[:, 1] * d2r) *
-                                        np.sin(xp[:, 0] * d2r),
-                                        np.sin(xp[:, 1] * d2r)]))
+    test_point = np.transpose(np.array([np.cos(x[1] * d2r) * np.cos(x[0] * d2r),
+                                        np.cos(x[1] * d2r) *
+                                        np.sin(x[0] * d2r),
+                                        np.sin(x[1] * d2r)]))
 
     normalization = 1. / sp.hyp1f1(0.5, 1.5, kappa) / 4. / np.pi
     logp_elem = np.log( normalization ) + \
         kappa * (np.dot(test_point, mu)**2.)
 
-    logp_elem[np.where(xp[:, 1] < -90.)] = -np.inf
-    logp_elem[np.where(xp[:, 1] > 90.)] = -np.inf
     logp = logp_elem.sum()
-    if np.isinf(logp):
-        raise pymc.ZeroProbability
-    else:
-        return logp
+    return logp
 
 
 WatsonGirdle = pymc.stochastic_from_dist('watson_girdle',

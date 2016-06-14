@@ -68,14 +68,16 @@ class APWPath(object):
         start = distributions.VonMisesFisher('start',
                                              lon_lat=(
                                                  self._start_pole.longitude, self._start_pole.latitude),
-                                             kappa=poles.kappa_from_two_sigma(self._start_pole.angular_error))
+                                             kappa=poles.kappa_from_two_sigma(self._start_pole.angular_error),
+                                             value=(0.,0.), observed=False)
 
         model_vars.append(start)
 
         # Make Euler pole direction random variables
         for i in range(self._n_euler_poles):
             euler = distributions.WatsonGirdle(
-                'euler_' + str(i), lon_lat=site_lon_lat, kappa=watson_concentration)
+                'euler_' + str(i), lon_lat=site_lon_lat, kappa=watson_concentration,
+                value=(0.,0.), observed=False)
             model_vars.append(euler)
             args.append(euler)
 
@@ -121,7 +123,8 @@ class APWPath(object):
         if self.model is None:
             raise Exception("No model has been created")
         self.mcmc = pymc.MCMC(self.model, db='pickle', dbname=self.dbname)
-        pymc.MAP(self.model).fit()
+        MAP = pymc.MAP(self.model)
+        MAP.fit()
         self.mcmc.sample(nsample, int(nsample / 5), 1)
         self.mcmc.db.close()
         self.load_mcmc()
