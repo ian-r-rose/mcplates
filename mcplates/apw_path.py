@@ -19,17 +19,18 @@ class APWPath(object):
         self._start_age = max(age_list)
         self._start_pole = self._poles[np.argmax(age_list)]
 
-        self._pole_position_fn = self._generate_pole_position_fn(
+        self._pole_position_fn = APWPath.generate_pole_position_fn(
             n_euler_poles, self._start_age)
         self.dbname = self._name + '.pickle'
         self.model = None
         self.mcmc = None
 
-    def _generate_pole_position_fn(self, n_euler_poles, start_age):
+    @staticmethod
+    def generate_pole_position_fn(n_euler_poles, start_age):
 
         def pole_position(start, age, *args):
             if len(args) != (n_euler_poles * 3 - 1):
-                raise Exception("Unexpected number of euler poles/changpoints")
+                raise Exception("Unexpected number of euler poles/changpoints: expected %i, got %i"%(n_euler_poles*3-1, len(args)))
 
             # Parse the variable length arguments into euler poles and
             # changepoints
