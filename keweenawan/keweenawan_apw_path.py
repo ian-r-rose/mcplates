@@ -1,15 +1,43 @@
+from __future__ import print_function
 import itertools
 import numpy as np
 import scipy.stats as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import cartopy.crs as ccrs
+import sys
 
 import mcplates
 
+# Shift all longitudes by 180 degrees to get around some plotting
+# issues. This is error prone, so it should be fixed eventually
 lon_shift = 180.
+
+# List of colors to use
 colors = ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99', '#e31a1c',
           '#fdbf6f', '#ff7f00', '#cab2d6', '#6a3d9a', '#ffff99', '#b15928']
+
+# Parse input
+#Get number of euler rotations
+if len(sys.argv) < 2:
+    raise Exception("Please enter the number of Euler rotations to fit.")
+n_euler_rotations = int(sys.argv[1])
+if n_euler_rotations < 1:
+    raise Exception("Number of Euler rotations must be greater than zero")
+# Read in optional map projection info
+if len(sys.argv) > 2:
+    proj_type = sys.argv[2].split(',')[0]
+    assert proj_type == 'M' or proj_type == 'O'
+    proj_lon = float(sys.argv[2].split(',')[1]) - lon_shift
+    if proj_type == 'O':
+        proj_lat = float(sys.argv[2].split(',')[2])
+else:
+    proj_type = 'M'
+    proj_lon = -lon_shift
+    proj_lat = 0.
+
+print("Fitting Keweenawan APW track with "+str(n_euler_rotations)+" Euler rotation" + ("" if n_euler_rotations == 1 else "s") )
+
 
 data = pd.read_csv("pole_means.csv")
 # Give unnamed column an appropriate name
@@ -38,7 +66,6 @@ for i, row in data.iterrows():
 slat = 46.8  # Duluth lat
 slon = 360. - 92.1 - lon_shift  # Duluth lon
 
-n_euler_rotations = 3
 path = mcplates.APWPath(
     'keweenawan_apw_' + str(n_euler_rotations), poles, n_euler_rotations)
 path.create_model(site_lon_lat=(slon, slat), watson_concentration=-1.0)
@@ -46,8 +73,11 @@ path.create_model(site_lon_lat=(slon, slat), watson_concentration=-1.0)
 
 def plot_synthetic_paths():
 
-    #ax = plt.axes(projection = ccrs.Orthographic(70.,-10.))
-    ax = plt.axes(projection=ccrs.Mollweide(0.))
+    if proj_type == 'M':
+        ax = plt.axes(projection=ccrs.Mollweide(proj_lon))
+    elif proj_type == 'O':
+        ax = plt.axes(projection = ccrs.Orthographic(proj_lon,proj_lat))
+
     ax.gridlines()
     ax.set_global()
 
@@ -90,8 +120,11 @@ def plot_age_samples():
 
 
 def plot_synthetic_poles():
-    ax = plt.axes(projection = ccrs.Orthographic(20., 30.))
-    #ax = plt.axes(projection=ccrs.Mollweide(0.))
+    if proj_type == 'M':
+        ax = plt.axes(projection=ccrs.Mollweide(proj_lon))
+    elif proj_type == 'O':
+        ax = plt.axes(projection = ccrs.Orthographic(proj_lon,proj_lat))
+
     ax.gridlines()
     ax.set_global()
 
