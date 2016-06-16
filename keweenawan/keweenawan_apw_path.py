@@ -17,6 +17,7 @@ lon_shift = 180.
 colors = ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99', '#e31a1c',
           '#fdbf6f', '#ff7f00', '#cab2d6', '#6a3d9a', '#ffff99', '#b15928']
 
+
 # Parse input
 #Get number of euler rotations
 if len(sys.argv) < 2:
@@ -98,7 +99,8 @@ def plot_synthetic_paths():
         p.plot(ax, color=colorcycle.next())
 
     ax.scatter(slon, slat, transform=ccrs.PlateCarree(), marker="*", s=100)
-    plt.show()
+    #plt.show()
+    plt.savefig("keweenawan_paths" + str(n_euler_rotations)+".pdf")
 
 
 def plot_age_samples():
@@ -116,7 +118,8 @@ def plot_age_samples():
                                   0], scale=p.sigma_age[1] - p.sigma_age[0])
         plt.hist(age_samples, normed=True, alpha=0.3)
         ax.fill_between(age, 0, dist, color=c, alpha=0.7)
-    plt.show()
+    #plt.show()
+    plt.savefig("keweenawan_ages" + str(n_euler_rotations)+".pdf")
 
 
 def plot_synthetic_poles():
@@ -143,7 +146,8 @@ def plot_synthetic_poles():
         ax.scatter(lons[:, i], lats[:, i], color=c,
                    transform=ccrs.PlateCarree())
 
-    plt.show()
+    #plt.show()
+    plt.savefig("keweenawan_poles" + str(n_euler_rotations)+".pdf")
 
 
 def plot_plate_speeds():
@@ -165,7 +169,8 @@ def plot_plate_speeds():
         #ax = fig.add_subplot(2, n_euler_rotations, n_euler_rotations + i)
         #ax.hist(rates, bins=30, normed=True)
         i += 1
-    plt.show()
+    #plt.show()
+    plt.savefig("keweenawan_speeds" + str(n_euler_rotations)+".pdf")
 
 
 if __name__ == "__main__":
