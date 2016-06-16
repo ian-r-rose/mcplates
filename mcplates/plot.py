@@ -11,18 +11,19 @@ from numba import jit
 
 from .poles import Pole
 
-cmap_green = LinearSegmentedColormap.from_list('vphi', [(0, '#ffffff'), (0.2, '#edf8e9'), (
-    0.4, '#bae4b3'), (0.6, '#74c476'), (0.8, '#31a354'), (1.0, '#006d2c')], gamma=0.5)
-cmap_green.set_bad('w', alpha=0.0)
-
-cmap_blue = LinearSegmentedColormap.from_list('vphi', [(0, '#ffffff'), (0.2, '#eff3ff'), (
-    0.4, '#bdd7e7'), (0.6, '#6baed6'), (0.8, '#3182bd'), (1.0, '#08519c')], gamma=0.5)
+cmap_blue = plt.get_cmap('Blues')
+cmap_red = plt.get_cmap('Reds')
+cmap_green = plt.get_cmap('Greens')
+cmap_orange = plt.get_cmap('Oranges')
+cmap_purple = plt.get_cmap('Purples')
 cmap_blue.set_bad('w', alpha=0.0)
-cmap_red = LinearSegmentedColormap.from_list('vphi', [(0, '#ffffff'), (0.2, '#fee5d9'), (
-    0.4, '#fcae91'), (0.6, '#fb6a4a'), (0.8, '#de2d26'), (1.0, '#a50f15')], gamma=0.5)
 cmap_red.set_bad('w', alpha=0.0)
+cmap_green.set_bad('w', alpha=0.0)
+cmap_orange.set_bad('w', alpha=0.0)
+cmap_purple.set_bad('w', alpha=0.0)
 
-cmaps = cycle([cmap_red, cmap_green, cmap_blue])
+cmap_list = [cmap_blue, cmap_red, cmap_green, cmap_orange, cmap_purple]
+cmaps = cycle(cmap_list)
 
 
 continent_dictionary = { 'africa': 'af.asc',
