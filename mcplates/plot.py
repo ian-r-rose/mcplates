@@ -52,8 +52,8 @@ def bin_trace(lon_samples, lat_samples, resolution):
     The resolution keyword gives the number of divisions in latitude.
     The divisions in longitude is twice that.
     """
-    lats = np.linspace(-90., 90., resolution, endpoint=False)
-    lons = np.linspace(-180., 180., 2. * resolution, endpoint=False)
+    lats = np.linspace(-90., 90., resolution, endpoint=True)
+    lons = np.linspace(-180., 180., 2. * resolution, endpoint=True)
     lon_grid, lat_grid = np.meshgrid(lons, lats)
     hist = np.zeros_like(lon_grid)
 
