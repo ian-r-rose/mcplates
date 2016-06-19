@@ -67,7 +67,7 @@ class Pole(object):
             0., colat[0] * rot.d2r, lon[0] * rot.d2r)
         self._pole = np.dot(m2, np.dot(m1, self._pole))
 
-    def plot(self, axes, **kwargs):
+    def plot(self, axes, south_pole=False, **kwargs):
         artists = []
         if self._angular_error is not None:
             lons = np.linspace(0., 360., 361.)
@@ -78,13 +78,20 @@ class Pole(object):
                 0., (self.colatitude) * rot.d2r, self.longitude * rot.d2r)
             rotated_vecs = np.dot(rotation_matrix, vecs)
             lons, lats, norms = rot.cartesian_to_spherical(rotated_vecs)
+            if south_pole is True:
+                lons = lons-180.
+                lats = -lats
             path = matplotlib.path.Path(np.transpose(np.array([lons, lats])))
             circ_patch = matplotlib.patches.PathPatch(
                 path, transform=ccrs.PlateCarree(), alpha=0.5, **kwargs)
             circ_artist = axes.add_patch(circ_patch)
             artists.append(circ_artist)
-        artist = axes.scatter(self.longitude, self.latitude,
-                              transform=ccrs.PlateCarree(), **kwargs)
+        if south_pole is False:
+            artist = axes.scatter(self.longitude, self.latitude,
+                                  transform=ccrs.PlateCarree(), **kwargs)
+        else:
+            artist = axes.scatter(self.longitude-180., -self.latitude,
+                                  transform=ccrs.PlateCarree(), **kwargs)
         artists.append(artist)
         return artists
 
