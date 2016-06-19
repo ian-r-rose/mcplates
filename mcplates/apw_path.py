@@ -124,8 +124,7 @@ class APWPath(object):
         if self.model is None:
             raise Exception("No model has been created")
         self.mcmc = pymc.MCMC(self.model, db='pickle', dbname=self.dbname)
-        MAP = pymc.MAP(self.model)
-        MAP.fit()
+        self.find_MAP()
         self.mcmc.sample(nsample, int(nsample / 5), 1)
         self.mcmc.db.close()
         self.load_mcmc()
@@ -133,6 +132,12 @@ class APWPath(object):
     def load_mcmc(self):
         self.mcmc = pymc.MCMC(self.model, db='pickle', dbname=self.dbname)
         self.mcmc.db = pymc.database.pickle.load(self.dbname)
+
+    def find_MAP(self):
+        self.MAP = pymc.MAP(self.model)
+        self.MAP.fit()
+        self.logp_at_max = self.MAP.logp_at_max
+        return self.logp_at_max
 
     def euler_directions(self):
         if self.mcmc.db is None:
