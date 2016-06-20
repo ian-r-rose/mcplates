@@ -23,7 +23,7 @@ class APWPath(object):
         self._pole_position_fn = APWPath.generate_pole_position_fn(
             n_euler_poles, self._start_age)
         self.dbname = self._name + '.pickle'
-        self.model = None
+        self.model_vars = None
         self.mcmc = None
 
     @staticmethod
@@ -118,23 +118,23 @@ class APWPath(object):
             model_vars.append(lon_lat)
             model_vars.append(observed_pole)
 
-        self.model = pymc.Model(model_vars)
+        self.model_vars = model_vars
 
     def sample_mcmc(self, nsample=10000):
-        if self.model is None:
+        if self.model_vars is None:
             raise Exception("No model has been created")
-        self.mcmc = pymc.MCMC(self.model, db='pickle', dbname=self.dbname)
+        self.mcmc = pymc.MCMC(self.model_vars, db='pickle', dbname=self.dbname)
         self.find_MAP()
         self.mcmc.sample(nsample, int(nsample / 5), 1)
         self.mcmc.db.close()
         self.load_mcmc()
 
     def load_mcmc(self):
-        self.mcmc = pymc.MCMC(self.model, db='pickle', dbname=self.dbname)
+        self.mcmc = pymc.MCMC(self.model_vars, db='pickle', dbname=self.dbname)
         self.mcmc.db = pymc.database.pickle.load(self.dbname)
 
     def find_MAP(self):
-        self.MAP = pymc.MAP(self.model)
+        self.MAP = pymc.MAP(self.model_vars)
         self.MAP.fit()
         self.logp_at_max = self.MAP.logp_at_max
         return self.logp_at_max
