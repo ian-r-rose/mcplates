@@ -84,7 +84,7 @@ class APWPath(object):
 
         # Make Euler pole rate random variables
         for i in range(self._n_euler_poles):
-            rate = pymc.Exponential('rate_' + str(i), 1.)
+            rate = pymc.Uniform('rate_' + str(i), 0., 10.)
             model_vars.append(rate)
             args.append(rate)
 
