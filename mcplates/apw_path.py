@@ -62,7 +62,10 @@ class APWPath(object):
 
         return pole_position
 
-    def create_model(self, site_lon_lat=[0., 0.], watson_concentration=0.):
+    def create_model(self, site_lon_lat=[0., 0.], watson_concentration=0., rate_scale=2.5):
+        assert rate_scale > 1.0 "rate_scale must be a positive number."
+        assert watson_concentration <= 0.0 "Nonnegative Watson concentration parameters are not supported."
+
         model_vars = []
         args = []
 
@@ -84,8 +87,7 @@ class APWPath(object):
 
         # Make Euler pole rate random variables
         for i in range(self._n_euler_poles):
-            #rate = pymc.Uniform('rate_' + str(i), 0., 10.)
-            rate = pymc.Exponential('rate_' + str(i), 2.5)
+            rate = pymc.Exponential('rate_' + str(i), rate_scale)
             model_vars.append(rate)
             args.append(rate)
 
