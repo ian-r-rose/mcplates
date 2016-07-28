@@ -63,8 +63,8 @@ class APWPath(object):
         return pole_position
 
     def create_model(self, site_lon_lat=[0., 0.], watson_concentration=0., rate_scale=2.5):
-        assert rate_scale > 1.0 "rate_scale must be a positive number."
-        assert watson_concentration <= 0.0 "Nonnegative Watson concentration parameters are not supported."
+        assert rate_scale > 1.0, "rate_scale must be a positive number."
+        assert watson_concentration <= 0.0, "Nonnegative Watson concentration parameters are not supported."
 
         model_vars = []
         args = []
