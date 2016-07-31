@@ -67,6 +67,9 @@ class Pole(object):
             0., colat[0] * rot.d2r, lon[0] * rot.d2r)
         self._pole = np.dot(m2, np.dot(m1, self._pole))
 
+    def add(self, pole):
+        self._pole = self._pole + pole._pole
+
     def plot(self, axes, south_pole=False, **kwargs):
         artists = []
         if self._angular_error is not None:

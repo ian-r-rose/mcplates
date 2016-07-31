@@ -29,7 +29,7 @@ class APWPath(object):
     @staticmethod
     def generate_pole_position_fn(n_euler_poles, start_age):
 
-        def pole_position(start, age, *args):
+        def pole_position(start, age, tpw_pole, tpw_rate, *args):
             if len(args) != (n_euler_poles * 3 - 1):
                 raise Exception("Unexpected number of euler poles/changpoints: expected %i, got %i"%(n_euler_poles*3-1, len(args)))
 
@@ -44,18 +44,24 @@ class APWPath(object):
             euler_poles = [poles.EulerPole(ll[0], ll[1], r)
                            for ll, r in zip(lon_lats, rates)]
 
+            # make a TPW pole
+            TPW = poles.EulerPole( tpw_pole[0], tpw_pole[1], tpw_rate)
+
             # Now make a starting pole
             pole = poles.PaleomagneticPole(start[0], start[1], age=age)
             time = start_age
 
             for e, c in zip(euler_poles, changepoints):
+                # add tpw contribution
+                e2 = e.copy()
+                e2.add(TPW)
                 if age < c:
-                    angle = e.rate * (time - c)
-                    pole.rotate(e, angle)
+                    angle = e2.rate * (time - c)
+                    pole.rotate(e2, angle)
                     time = c
                 else:
-                    angle = e.rate * (time - age)
-                    pole.rotate(e, angle)
+                    angle = e2.rate * (time - age)
+                    pole.rotate(e2, angle)
                     break
             lon_lat = np.array([pole.longitude, pole.latitude])
             return lon_lat
@@ -99,6 +105,14 @@ class APWPath(object):
 
         model_vars.append(start)
 
+        # Make TPW pole
+        tpw_pole = distributions.WatsonGirdle(
+                   'tpw_pole', lon_lat=(self._start_pole.longitude, self._start_pole.latitude),
+                   kappa=-20., value=(0.,0.), observed=False)
+        tpw_rate = pymc.Exponential('tpw_rate', 0.5)
+        model_vars.append(tpw_pole)
+        model_vars.append(tpw_rate)
+
         # Make Euler pole direction random variables
         for i in range(self._n_euler_poles):
             euler = distributions.WatsonGirdle(
@@ -130,8 +144,8 @@ class APWPath(object):
                 pole_age = pymc.Uniform(
                     'a_' + str(i), lower=p.sigma_age[0], upper=p.sigma_age[1])
 
-            lon_lat = pymc.Lambda('ll_' + str(i), lambda st=start, a=pole_age, args=args:
-                                  self._pole_position_fn(st, a, *args),
+            lon_lat = pymc.Lambda('ll_' + str(i), lambda st=start, a=pole_age, tpw=tpw_pole, r=tpw_rate, args=args:
+                                  self._pole_position_fn(st, a, tpw, r, *args),
                                   dtype=np.float, trace=False, plot=False)
             observed_pole = distributions.VonMisesFisher('p_' + str(i),
                                                          lon_lat,
@@ -163,6 +177,19 @@ class APWPath(object):
         self.MAP.fit()
         self.logp_at_max = self.MAP.logp_at_max
         return self.logp_at_max
+
+    def tpw_pole(self):
+        if self.mcmc.db is None:
+            raise Exception("No database loaded")
+        pole_samples = self.mcmc.db.trace('tpw_pole')[:]
+        pole_samples[:,0] = rotations.clamp_longitude( pole_samples[:,0])
+        return pole_samples
+
+    def tpw_rate(self):
+        if self.mcmc.db is None:
+            raise Exception("No database loaded")
+        rate_samples = self.mcmc.db.trace('tpw_rate')[:]
+        return rate_samples
 
     def euler_directions(self):
         if self.mcmc.db is None:
@@ -215,7 +242,7 @@ class APWPath(object):
         for i in range(n):
 
             # begin args list with placeholder for age
-            args = [self.mcmc.db.trace('start')[index], 0.0]
+            args = [self.mcmc.db.trace('start')[index], 0.0, self.mcmc.db.trace('tpw_pole')[index], self.mcmc.db.trace('tpw_rate')[index]]
 
             # add the euler pole direction arguments
             for j in range(self._n_euler_poles):
@@ -260,7 +287,7 @@ class APWPath(object):
         index = 0
         for i in range(n):
             # begin args list with placeholder for age
-            args = [self.mcmc.db.trace('start')[index], 0.0]
+            args = [self.mcmc.db.trace('start')[index], 0.0, self.mcmc.db.trace('tpw_pole')[index], self.mcmc.db.trace('tpw_rate')[index]]
 
             # add the euler pole direction arguments
             for j in range(self._n_euler_poles):
