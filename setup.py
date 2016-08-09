@@ -1,7 +1,6 @@
 from glob import glob
 
 data_files = glob('mcplates/data/plate_boundaries/*') +  glob('data/continents/*') + glob('data/*')
-print data_files
 
 metadata = dict( name= 'mcplates',
                  version = 0.1,
