@@ -23,7 +23,7 @@ for a, s, ll in zip(ages, sigma_ages, lon_lats):
 path = mcplates.APWPath( 'apw', poles, 2 )
 path.create_model()
 
-def plot_result( trace ):
+def plot_result():
 
     ax = plt.axes(projection = ccrs.Orthographic(0.,-30.))
     #ax = plt.axes(projection = ccrs.Mollweide(0.))
@@ -34,7 +34,7 @@ def plot_result( trace ):
     for directions in direction_samples:
         mcplates.plot.plot_distribution( ax, directions[:,0], directions[:,1])
 
-    pathlons, pathlats = path.compute_synthetics(n=100)
+    pathlons, pathlats = path.compute_synthetic_paths(n=100)
     for pathlon,pathlat in zip(pathlons,pathlats):
         ax.plot(pathlon,pathlat, transform=ccrs.PlateCarree(), color='b', alpha=0.05 )
 
@@ -51,4 +51,4 @@ if __name__ == "__main__":
         path.load_mcmc()
     else:
         path.sample_mcmc(10000)
-    plot_result(path.db.trace)
+    plot_result()

@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
 import cartopy.crs as ccrs
-from numba import jit
 
 from .poles import Pole
 
