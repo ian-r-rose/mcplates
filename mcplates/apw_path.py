@@ -63,6 +63,28 @@ class APWPath(object):
         return pole_position
 
     def create_model(self, site_lon_lat=[0., 0.], watson_concentration=0., rate_scale=2.5):
+        """
+        Parameters
+        ----------
+        watson_concentration: Watson girdle distribution parameter associated
+        with the distance of the Euler pole from APW path. Default parameter of
+        0 correspond to a uniform distribution of a sphere.
+
+        rate_scale: scale parameter for an exponential plate rates distribution.
+        Default parameter of 2.5 is based on the best fitting scale parameter
+        for the 14 largest plates in the NNR-MORVEL56 model.
+        ----------
+
+        Bayesian analysis requires that prior probability distributions are
+        specified for each of the model parameters in the inverse problem.
+        This function allows for the prior probability distribution of the Euler
+        pole directions and the Euler pole magnitudes to be specified. The
+        function also specifies the prior probability distribution of the start
+        of the inversion utilizing the oldest pole in the pole list, the
+        changepoint if there are multiple Eulers (as a uniform distribution
+        between the oldest and youngest pole) and the age of the poles (either
+        normal or uniform distribution as specified in the pole list).
+        """
         assert rate_scale > 0.0, "rate_scale must be a positive number."
         assert watson_concentration <= 0.0, "Nonnegative Watson concentration parameters are not supported."
 
