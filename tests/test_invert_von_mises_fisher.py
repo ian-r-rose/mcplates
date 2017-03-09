@@ -15,12 +15,16 @@ vmf = VonMisesFisher('vmf', lon_lat=[lon_hidden,lat_hidden], kappa=kappa_hidden)
 data = np.array([vmf.random() for i in range(100)])
 
 
+model_parameters = []
 kappa = pymc.Exponential('kappa', 1.)
 lon_lat = VonMisesFisher('lon_lat', lon_lat=(0.,0.), kappa=0.00)
+model_parameters.append(kappa)
+model_parameters.append(lon_lat)
 
-direction = VonMisesFisher('direction', lon_lat=lon_lat, kappa=kappa, value=data, observed=True)
+for sample in data:
+    model_parameters.append(VonMisesFisher('direction', lon_lat=lon_lat, kappa=kappa, value=sample, observed=True))
 
-model =pymc.Model([ direction, kappa, lon_lat ])
+model =pymc.Model(model_parameters)
 mcmc = pymc.MCMC(model)
 mcmc.sample(10000, 1000, 1)
 kappa_trace = mcmc.trace('kappa')[:]
