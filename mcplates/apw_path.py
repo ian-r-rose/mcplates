@@ -285,3 +285,58 @@ class APWPath(object):
             index += interval
 
         return pathlons, pathlats
+
+    def compute_poles_on_path(self, ages, n_poles=100):
+    """
+    For a given suite of paths, return the positions predicted on the paths
+    by the inversion for a given list of ages.
+
+    Parameters
+    ----------
+    self : the paths object
+    ages : list of ages along the path in Ma (e.g. [10,30,50])
+    n_poles : number of paths to sample and the resultant number of poles that
+        will be returned for a given age.
+
+    Returns
+    -------
+    pathlons, pathlats: an array of pathlons and an array pathlats with one
+        column for each age
+    """
+        assert n_poles <= len(self.mcmc.db.trace('rate_0')[
+                        :]) and n_poles >= 1, "Number of requested samples is not in allowable range"
+        interval = max(1, int(len(self.mcmc.db.trace('rate_0')[:]) / n_poles))
+        assert(interval > 0)
+
+        n_ages = len(ages)
+        pathlats = np.zeros((n_poles, n_ages))
+        pathlons = np.zeros((n_poles, n_ages))
+
+        index = 0
+        for i in range(n_poles):
+            # begin args list with placeholder for age
+            args = [self.mcmc.db.trace('start')[index], 0.0]
+
+            # add the euler pole direction arguments
+            for j in range(self._n_euler_poles):
+                euler = self.mcmc.db.trace('euler_' + str(j))[index]
+                args.append(euler)
+
+            # add the euler pole rate arguments
+            for j in range(self._n_euler_poles):
+                rate = self.mcmc.db.trace('rate_' + str(j))[index]
+                args.append(rate)
+
+            # add the switchpoint arguments
+            for j in range(self._n_euler_poles - 1):
+                changepoint = self.mcmc.db.trace('changepoint_' + str(j))[index]
+                args.append(changepoint)
+
+            for j, a in enumerate(ages):
+                args[1] = a  # put in the relevant age
+                lon_lat = self._pole_position_fn(*args)
+                pathlons[i, j] = lon_lat[0]
+                pathlats[i, j] = lon_lat[1]
+            index += interval
+
+        return pathlons, pathlats
