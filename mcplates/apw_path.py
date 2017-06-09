@@ -29,8 +29,8 @@ class APWPath(object):
     @staticmethod
     def generate_pole_position_fn(n_euler_poles, start_age):
 
-        def pole_position(start, age, tpw_pole, tpw_rate, *args):
-            if len(args) != (n_euler_poles * 3 - 1):
+        def pole_position(start, age, tpw_pole_angle, tpw_rate, *args):
+            if len(args) != max( (n_euler_poles * 3 - 1), 0):
                 raise Exception("Unexpected number of euler poles/changpoints: expected %i, got %i"%(n_euler_poles*3-1, len(args)))
 
             # Parse the variable length arguments into euler poles and
@@ -44,25 +44,36 @@ class APWPath(object):
             euler_poles = [poles.EulerPole(ll[0], ll[1], r)
                            for ll, r in zip(lon_lats, rates)]
 
-            # make a TPW pole
-            TPW = poles.EulerPole( tpw_pole[0], tpw_pole[1], tpw_rate)
-
-            # Now make a starting pole
+            # make a starting pole
             pole = poles.PaleomagneticPole(start[0], start[1], age=age)
             time = start_age
 
-            for e, c in zip(euler_poles, changepoints):
-                # add tpw contribution
-                e2 = e.copy()
-                e2.add(TPW)
-                if age < c:
-                    angle = e2.rate * (time - c)
-                    pole.rotate(e2, angle)
-                    time = c
-                else:
-                    angle = e2.rate * (time - age)
-                    pole.rotate(e2, angle)
-                    break
+            # make a TPW pole
+            test_1 = np.array([0.,0.,1.])
+            test_2 = np.array([1.,0.,0.])
+            if np.dot(pole._pole, test_1) > np.dot(pole._pole, test_2):
+                great_circle_pole = np.cross(pole._pole, test_2)
+            else:
+                great_circle_pole = np.cross(pole._pole, test_1)
+            lon, lat, _ = rotations.cartesian_to_spherical(great_circle_pole)
+            TPW = poles.EulerPole(lon[0], lat[0], tpw_rate)
+            TPW.rotate(pole, tpw_pole_angle)
+
+            if n_euler_poles == 0:
+                pole.rotate(TPW, TPW.rate * (time-age))
+            else:
+                for e, c in zip(euler_poles, changepoints):
+                    # add tpw contribution
+                    e2 = e.copy()
+                    e2.add(TPW)
+                    if age < c:
+                        angle = e2.rate * (time - c)
+                        pole.rotate(e2, angle)
+                        time = c
+                    else:
+                        angle = e2.rate * (time - age)
+                        pole.rotate(e2, angle)
+                        break
             lon_lat = np.array([pole.longitude, pole.latitude])
             return lon_lat
 
@@ -106,11 +117,9 @@ class APWPath(object):
         model_vars.append(start)
 
         # Make TPW pole
-        tpw_pole = distributions.WatsonGirdle(
-                   'tpw_pole', lon_lat=(self._start_pole.longitude, self._start_pole.latitude),
-                   kappa=-20., value=(0.,0.), observed=False)
+        tpw_pole_angle = pymc.Uniform('tpw_pole_angle', 0., 360., value=0., observed=False)
         tpw_rate = pymc.Exponential('tpw_rate', 0.5)
-        model_vars.append(tpw_pole)
+        model_vars.append(tpw_pole_angle)
         model_vars.append(tpw_rate)
 
         # Make Euler pole direction random variables
@@ -144,7 +153,7 @@ class APWPath(object):
                 pole_age = pymc.Uniform(
                     'a_' + str(i), lower=p.sigma_age[0], upper=p.sigma_age[1])
 
-            lon_lat = pymc.Lambda('ll_' + str(i), lambda st=start, a=pole_age, tpw=tpw_pole, r=tpw_rate, args=args:
+            lon_lat = pymc.Lambda('ll_' + str(i), lambda st=start, a=pole_age, tpw=tpw_pole_angle, r=tpw_rate, args=args:
                                   self._pole_position_fn(st, a, tpw, r, *args),
                                   dtype=np.float, trace=False, plot=False)
             observed_pole = distributions.VonMisesFisher('p_' + str(i),
@@ -178,14 +187,30 @@ class APWPath(object):
         self.logp_at_max = self.MAP.logp_at_max
         return self.logp_at_max
 
-    def tpw_pole(self):
+    def tpw_poles(self):
         if self.mcmc.db is None:
             raise Exception("No database loaded")
-        pole_samples = self.mcmc.db.trace('tpw_pole')[:]
-        pole_samples[:,0] = rotations.clamp_longitude( pole_samples[:,0])
-        return pole_samples
+        tpw_pole_angle_samples = self.mcmc.db.trace('tpw_pole_angle')[:]
+        start_samples = self.mcmc.db.trace('start')[:]
+        tpw_pole_samples = np.empty_like(start_samples)
+        index = 0
+        for start, tpw_pole_angle in zip(start_samples, tpw_pole_angle_samples):
+            test_1 = np.array([0.,0.,1.])
+            test_2 = np.array([1.,0.,0.])
+            pole = poles.Pole(start[0], start[1], 1.0)
+            if np.dot(pole._pole, test_1) > np.dot(pole._pole, test_2):
+                great_circle_pole = np.cross(pole._pole, test_2)
+            else:
+                great_circle_pole = np.cross(pole._pole, test_1)
+            lon, lat, _ = rotations.cartesian_to_spherical(great_circle_pole)
+            TPW = poles.Pole(lon[0], lat[0], 1.0)
+            TPW.rotate(pole, tpw_pole_angle)
+            tpw_pole_samples[index, :] = [TPW.longitude, TPW.latitude]
+            index+=1
 
-    def tpw_rate(self):
+        return tpw_pole_samples
+
+    def tpw_rates(self):
         if self.mcmc.db is None:
             raise Exception("No database loaded")
         rate_samples = self.mcmc.db.trace('tpw_rate')[:]
@@ -228,9 +253,9 @@ class APWPath(object):
 
     def compute_synthetic_poles(self, n=100):
 
-        assert n <= len(self.mcmc.db.trace('rate_0')[
+        assert n <= len(self.mcmc.db.trace('start')[
                         :]) and n >= 1, "Number of requested samples is not in allowable range"
-        interval = max(1, int(len(self.mcmc.db.trace('rate_0')[:]) / n))
+        interval = max(1, int(len(self.mcmc.db.trace('start')[:]) / n))
         assert(interval > 0)
 
         n_poles = len(self._poles)
@@ -242,7 +267,7 @@ class APWPath(object):
         for i in range(n):
 
             # begin args list with placeholder for age
-            args = [self.mcmc.db.trace('start')[index], 0.0, self.mcmc.db.trace('tpw_pole')[index], self.mcmc.db.trace('tpw_rate')[index]]
+            args = [self.mcmc.db.trace('start')[index], 0.0, self.mcmc.db.trace('tpw_pole_angle')[index], self.mcmc.db.trace('tpw_rate')[index]]
 
             # add the euler pole direction arguments
             for j in range(self._n_euler_poles):
@@ -273,9 +298,9 @@ class APWPath(object):
 
     def compute_synthetic_paths(self, n=100):
 
-        assert n <= len(self.mcmc.db.trace('rate_0')[
+        assert n <= len(self.mcmc.db.trace('start')[
                         :]) and n >= 1, "Number of requested samples is not in allowable range"
-        interval = max(1, int(len(self.mcmc.db.trace('rate_0')[:]) / n))
+        interval = max(1, int(len(self.mcmc.db.trace('start')[:]) / n))
         assert(interval > 0)
 
         n_segments = 100
@@ -287,7 +312,7 @@ class APWPath(object):
         index = 0
         for i in range(n):
             # begin args list with placeholder for age
-            args = [self.mcmc.db.trace('start')[index], 0.0, self.mcmc.db.trace('tpw_pole')[index], self.mcmc.db.trace('tpw_rate')[index]]
+            args = [self.mcmc.db.trace('start')[index], 0.0, self.mcmc.db.trace('tpw_pole_angle')[index], self.mcmc.db.trace('tpw_rate')[index]]
 
             # add the euler pole direction arguments
             for j in range(self._n_euler_poles):
@@ -314,25 +339,25 @@ class APWPath(object):
         return pathlons, pathlats
 
     def compute_poles_on_path(self, ages, n_poles=100):
-    """
-    For a given suite of paths, return the positions predicted on the paths
-    by the inversion for a given list of ages.
+        """
+        For a given suite of paths, return the positions predicted on the paths
+        by the inversion for a given list of ages.
 
-    Parameters
-    ----------
-    self : the paths object
-    ages : list of ages along the path in Ma (e.g. [10,30,50])
-    n_poles : number of paths to sample and the resultant number of poles that
-        will be returned for a given age.
+        Parameters
+        ----------
+        self : the paths object
+        ages : list of ages along the path in Ma (e.g. [10,30,50])
+        n_poles : number of paths to sample and the resultant number of poles that
+            will be returned for a given age.
 
-    Returns
-    -------
-    pathlons, pathlats: an array of pathlons and an array pathlats with one
-        column for each age
-    """
-        assert n_poles <= len(self.mcmc.db.trace('rate_0')[
+        Returns
+        -------
+        pathlons, pathlats: an array of pathlons and an array pathlats with one
+            column for each age
+        """
+        assert n_poles <= len(self.mcmc.db.trace('start')[
                         :]) and n_poles >= 1, "Number of requested samples is not in allowable range"
-        interval = max(1, int(len(self.mcmc.db.trace('rate_0')[:]) / n_poles))
+        interval = max(1, int(len(self.mcmc.db.trace('start')[:]) / n_poles))
         assert(interval > 0)
 
         n_ages = len(ages)
@@ -342,7 +367,7 @@ class APWPath(object):
         index = 0
         for i in range(n_poles):
             # begin args list with placeholder for age
-            args = [self.mcmc.db.trace('start')[index], 0.0]
+            args = [self.mcmc.db.trace('start')[index], 0.0, self.mcmc.db.trace('tpw_pole_angle')[index], self.mcmc.db.trace('tpw_rate')[index]]
 
             # add the euler pole direction arguments
             for j in range(self._n_euler_poles):
