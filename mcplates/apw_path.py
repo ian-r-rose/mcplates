@@ -79,7 +79,7 @@ class APWPath(object):
 
         return pole_position
 
-    def create_model(self, site_lon_lat=[0., 0.], watson_concentration=0., rate_scale=2.5):
+    def create_model(self, site_lon_lat=[0., 0.], watson_concentration=0., rate_scale=2.5, tpw_rate_scale = None):
         """
         Parameters
         ----------
@@ -87,9 +87,13 @@ class APWPath(object):
         with the distance of the Euler pole from APW path. Default parameter of
         0 correspond to a uniform distribution of a sphere.
 
-        rate_scale: scale parameter for an exponential plate rates distribution.
+        rate_scale: scale parameter for an exponential plate rates distribution (in Myr/deg).
         Default parameter of 2.5 is based on the best fitting scale parameter
-        for the 14 largest plates in the NNR-MORVEL56 model.
+        for the 14 largest plates in the NNR-MORVEL56 model. In an exponential distribution,
+        the expectation value for the rate is given by 1/lambda, where lambda is the rate scale.
+
+        tpw_rate_scale: scale parameter for an exponential TPW rate distribution (in Myr/deg).
+        Defaults to None, which corresponds to running a model with no TPW.
         ----------
 
         Bayesian analysis requires that prior probability distributions are
@@ -103,7 +107,12 @@ class APWPath(object):
         normal or uniform distribution as specified in the pole list).
         """
         assert rate_scale > 0.0, "rate_scale must be a positive number."
+        assert tpw_rate_scale == None or tpw_rate_scale > 0.0
         assert watson_concentration <= 0.0, "Nonnegative Watson concentration parameters are not supported."
+        if tpw_rate_scale is None:
+            self._include_tpw = False
+        else:
+            self._include_tpw = True
 
         model_vars = []
         args = []
@@ -117,10 +126,12 @@ class APWPath(object):
         model_vars.append(start)
 
         # Make TPW pole
-        tpw_pole_angle = pymc.Uniform('tpw_pole_angle', 0., 360., value=0., observed=False)
-        tpw_rate = pymc.Exponential('tpw_rate', 0.5)
-        model_vars.append(tpw_pole_angle)
-        model_vars.append(tpw_rate)
+        if self._include_tpw:
+            tpw_pole_angle = pymc.Uniform('tpw_pole_angle',
+                0., 360., value=0., observed=False)
+            tpw_rate = pymc.Exponential('tpw_rate', tpw_rate_scale)
+            model_vars.append(tpw_pole_angle)
+            model_vars.append(tpw_rate)
 
         # Make Euler pole direction random variables
         for i in range(self._n_euler_poles):
@@ -153,9 +164,20 @@ class APWPath(object):
                 pole_age = pymc.Uniform(
                     'a_' + str(i), lower=p.sigma_age[0], upper=p.sigma_age[1])
 
-            lon_lat = pymc.Lambda('ll_' + str(i), lambda st=start, a=pole_age, tpw=tpw_pole_angle, r=tpw_rate, args=args:
+
+            # Include TPW rate if it is part of model_vars
+            if self._include_tpw:
+                lon_lat = pymc.Lambda('ll_' + str(i),
+                        lambda st=start, a=pole_age, tpw=tpw_pole_angle, r=tpw_rate, args=args:
                                   self._pole_position_fn(st, a, tpw, r, *args),
                                   dtype=np.float, trace=False, plot=False)
+            # Otherwise use zero for TPW rate.
+            else:
+                lon_lat = pymc.Lambda('ll_' + str(i),
+                        lambda st=start, a=pole_age, args=args:
+                                  self._pole_position_fn(st, a, 0., 0., *args),
+                                  dtype=np.float, trace=False, plot=False)
+
             observed_pole = distributions.VonMisesFisher('p_' + str(i),
                                                          lon_lat,
                                                          kappa=poles.kappa_from_two_sigma(
@@ -190,6 +212,9 @@ class APWPath(object):
     def tpw_poles(self):
         if self.mcmc.db is None:
             raise Exception("No database loaded")
+        if self._include_tpw == False:
+            return []
+
         tpw_pole_angle_samples = self.mcmc.db.trace('tpw_pole_angle')[:]
         start_samples = self.mcmc.db.trace('start')[:]
         tpw_pole_samples = np.empty_like(start_samples)
@@ -213,6 +238,9 @@ class APWPath(object):
     def tpw_rates(self):
         if self.mcmc.db is None:
             raise Exception("No database loaded")
+        if self._include_tpw == False:
+            return []
+
         rate_samples = self.mcmc.db.trace('tpw_rate')[:]
         return rate_samples
 
@@ -267,7 +295,10 @@ class APWPath(object):
         for i in range(n):
 
             # begin args list with placeholder for age
-            args = [self.mcmc.db.trace('start')[index], 0.0, self.mcmc.db.trace('tpw_pole_angle')[index], self.mcmc.db.trace('tpw_rate')[index]]
+            if self._include_tpw:
+                args = [self.mcmc.db.trace('start')[index], 0.0, self.mcmc.db.trace('tpw_pole_angle')[index], self.mcmc.db.trace('tpw_rate')[index]]
+            else:
+                args = [self.mcmc.db.trace('start')[index], 0.0, 0.0, 0.0]
 
             # add the euler pole direction arguments
             for j in range(self._n_euler_poles):
@@ -312,7 +343,10 @@ class APWPath(object):
         index = 0
         for i in range(n):
             # begin args list with placeholder for age
-            args = [self.mcmc.db.trace('start')[index], 0.0, self.mcmc.db.trace('tpw_pole_angle')[index], self.mcmc.db.trace('tpw_rate')[index]]
+            if self._include_tpw:
+                args = [self.mcmc.db.trace('start')[index], 0.0, self.mcmc.db.trace('tpw_pole_angle')[index], self.mcmc.db.trace('tpw_rate')[index]]
+            else:
+                args = [self.mcmc.db.trace('start')[index], 0.0, 0.0, 0.0]
 
             # add the euler pole direction arguments
             for j in range(self._n_euler_poles):
@@ -367,7 +401,10 @@ class APWPath(object):
         index = 0
         for i in range(n_poles):
             # begin args list with placeholder for age
-            args = [self.mcmc.db.trace('start')[index], 0.0, self.mcmc.db.trace('tpw_pole_angle')[index], self.mcmc.db.trace('tpw_rate')[index]]
+            if self._include_tpw:
+                args = [self.mcmc.db.trace('start')[index], 0.0, self.mcmc.db.trace('tpw_pole_angle')[index], self.mcmc.db.trace('tpw_rate')[index]]
+            else:
+                args = [self.mcmc.db.trace('start')[index], 0.0, 0.0, 0.0]
 
             # add the euler pole direction arguments
             for j in range(self._n_euler_poles):
