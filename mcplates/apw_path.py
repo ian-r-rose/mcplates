@@ -14,7 +14,7 @@ class APWPath(object):
 
         self._name = name
         self._poles = paleomagnetic_pole_list
-        self._n_euler_poles = n_euler_poles
+        self.n_euler_rotations = n_euler_poles
 
         age_list = [p.age for p in self._poles]
         self._start_age = max(age_list)
@@ -110,9 +110,9 @@ class APWPath(object):
         assert tpw_rate_scale == None or tpw_rate_scale > 0.0
         assert watson_concentration <= 0.0, "Nonnegative Watson concentration parameters are not supported."
         if tpw_rate_scale is None:
-            self._include_tpw = False
+            self.include_tpw = False
         else:
-            self._include_tpw = True
+            self.include_tpw = True
 
         model_vars = []
         args = []
@@ -126,7 +126,7 @@ class APWPath(object):
         model_vars.append(start)
 
         # Make TPW pole
-        if self._include_tpw:
+        if self.include_tpw:
             tpw_pole_angle = pymc.Uniform('tpw_pole_angle',
                 0., 360., value=0., observed=False)
             tpw_rate = pymc.Exponential('tpw_rate', tpw_rate_scale)
@@ -134,7 +134,7 @@ class APWPath(object):
             model_vars.append(tpw_rate)
 
         # Make Euler pole direction random variables
-        for i in range(self._n_euler_poles):
+        for i in range(self.n_euler_rotations):
             euler = distributions.WatsonGirdle(
                 'euler_' + str(i), lon_lat=site_lon_lat, kappa=watson_concentration,
                 value=(0.,0.), observed=False)
@@ -142,14 +142,14 @@ class APWPath(object):
             args.append(euler)
 
         # Make Euler pole rate random variables
-        for i in range(self._n_euler_poles):
+        for i in range(self.n_euler_rotations):
             rate = pymc.Exponential('rate_' + str(i), rate_scale)
             model_vars.append(rate)
             args.append(rate)
 
         # Make changepoint random variables
         age_list = [p.age for p in self._poles]
-        for i in range(self._n_euler_poles - 1):
+        for i in range(self.n_euler_rotations - 1):
             changepoint = pymc.Uniform(
                 'changepoint_' + str(i), min(age_list), max(age_list))
             model_vars.append(changepoint)
@@ -166,7 +166,7 @@ class APWPath(object):
 
 
             # Include TPW rate if it is part of model_vars
-            if self._include_tpw:
+            if self.include_tpw:
                 lon_lat = pymc.Lambda('ll_' + str(i),
                         lambda st=start, a=pole_age, tpw=tpw_pole_angle, r=tpw_rate, args=args:
                                   self._pole_position_fn(st, a, tpw, r, *args),
@@ -212,7 +212,7 @@ class APWPath(object):
     def tpw_poles(self):
         if self.mcmc.db is None:
             raise Exception("No database loaded")
-        if self._include_tpw == False:
+        if self.include_tpw == False:
             return []
 
         tpw_pole_angle_samples = self.mcmc.db.trace('tpw_pole_angle')[:]
@@ -238,7 +238,7 @@ class APWPath(object):
     def tpw_rates(self):
         if self.mcmc.db is None:
             raise Exception("No database loaded")
-        if self._include_tpw == False:
+        if self.include_tpw == False:
             return []
 
         rate_samples = self.mcmc.db.trace('tpw_rate')[:]
@@ -248,7 +248,7 @@ class APWPath(object):
         if self.mcmc.db is None:
             raise Exception("No database loaded")
         direction_samples = []
-        for i in range(self._n_euler_poles):
+        for i in range(self.n_euler_rotations):
             samples = self.mcmc.db.trace('euler_' + str(i))[:]
             samples[:,0] = rotations.clamp_longitude( samples[:,0])
             direction_samples.append(samples)
@@ -258,7 +258,7 @@ class APWPath(object):
         if self.mcmc.db is None:
             raise Exception("No database loaded")
         rate_samples = []
-        for i in range(self._n_euler_poles):
+        for i in range(self.n_euler_rotations):
             rate_samples.append(self.mcmc.db.trace('rate_' + str(i))[:])
         return rate_samples
 
@@ -266,7 +266,7 @@ class APWPath(object):
         if self.mcmc.db is None:
             raise Exception("No database loaded")
         changepoint_samples = []
-        for i in range(self._n_euler_poles - 1):
+        for i in range(self.n_euler_rotations - 1):
             changepoint_samples.append(
                 self.mcmc.db.trace('changepoint_' + str(i))[:])
         return changepoint_samples
@@ -295,23 +295,23 @@ class APWPath(object):
         for i in range(n):
 
             # begin args list with placeholder for age
-            if self._include_tpw:
+            if self.include_tpw:
                 args = [self.mcmc.db.trace('start')[index], 0.0, self.mcmc.db.trace('tpw_pole_angle')[index], self.mcmc.db.trace('tpw_rate')[index]]
             else:
                 args = [self.mcmc.db.trace('start')[index], 0.0, 0.0, 0.0]
 
             # add the euler pole direction arguments
-            for j in range(self._n_euler_poles):
+            for j in range(self.n_euler_rotations):
                 euler = self.mcmc.db.trace('euler_' + str(j))[index]
                 args.append(euler)
 
             # add the euler pole rate arguments
-            for j in range(self._n_euler_poles):
+            for j in range(self.n_euler_rotations):
                 rate = self.mcmc.db.trace('rate_' + str(j))[index]
                 args.append(rate)
 
             # add the switchpoint arguments
-            for j in range(self._n_euler_poles - 1):
+            for j in range(self.n_euler_rotations - 1):
                 changepoint = self.mcmc.db.trace('changepoint_' + str(j))[index]
                 args.append(changepoint)
 
@@ -343,23 +343,23 @@ class APWPath(object):
         index = 0
         for i in range(n):
             # begin args list with placeholder for age
-            if self._include_tpw:
+            if self.include_tpw:
                 args = [self.mcmc.db.trace('start')[index], 0.0, self.mcmc.db.trace('tpw_pole_angle')[index], self.mcmc.db.trace('tpw_rate')[index]]
             else:
                 args = [self.mcmc.db.trace('start')[index], 0.0, 0.0, 0.0]
 
             # add the euler pole direction arguments
-            for j in range(self._n_euler_poles):
+            for j in range(self.n_euler_rotations):
                 euler = self.mcmc.db.trace('euler_' + str(j))[index]
                 args.append(euler)
 
             # add the euler pole rate arguments
-            for j in range(self._n_euler_poles):
+            for j in range(self.n_euler_rotations):
                 rate = self.mcmc.db.trace('rate_' + str(j))[index]
                 args.append(rate)
 
             # add the switchpoint arguments
-            for j in range(self._n_euler_poles - 1):
+            for j in range(self.n_euler_rotations - 1):
                 changepoint = self.mcmc.db.trace('changepoint_' + str(j))[index]
                 args.append(changepoint)
 
@@ -401,23 +401,23 @@ class APWPath(object):
         index = 0
         for i in range(n_poles):
             # begin args list with placeholder for age
-            if self._include_tpw:
+            if self.include_tpw:
                 args = [self.mcmc.db.trace('start')[index], 0.0, self.mcmc.db.trace('tpw_pole_angle')[index], self.mcmc.db.trace('tpw_rate')[index]]
             else:
                 args = [self.mcmc.db.trace('start')[index], 0.0, 0.0, 0.0]
 
             # add the euler pole direction arguments
-            for j in range(self._n_euler_poles):
+            for j in range(self.n_euler_rotations):
                 euler = self.mcmc.db.trace('euler_' + str(j))[index]
                 args.append(euler)
 
             # add the euler pole rate arguments
-            for j in range(self._n_euler_poles):
+            for j in range(self.n_euler_rotations):
                 rate = self.mcmc.db.trace('rate_' + str(j))[index]
                 args.append(rate)
 
             # add the switchpoint arguments
-            for j in range(self._n_euler_poles - 1):
+            for j in range(self.n_euler_rotations - 1):
                 changepoint = self.mcmc.db.trace('changepoint_' + str(j))[index]
                 args.append(changepoint)
 
