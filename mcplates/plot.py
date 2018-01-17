@@ -44,7 +44,7 @@ continent_dictionary = { 'africa': 'af.asc',
 
 def bin_trace(lon_samples, lat_samples, resolution):
     """
-    Given a trace of samples in longitude and latitude, bin them 
+    Given a trace of samples in longitude and latitude, bin them
     in latitude and longitude, and normalize the bins so that
     the integral of probability density over the sphere is one.
 
@@ -68,9 +68,9 @@ def bin_trace(lon_samples, lat_samples, resolution):
             # Just skip invalid latitudes if they happen to arise
             continue
 
-        lon_index = np.floor((lon + 180.) / dlon)
-        lat_index = np.floor((lat + 90.) / dlat)
-        hist[lat_index, lon_index] += 1.
+        lon_index = int(np.floor((lon + 180.) / dlon))
+        lat_index = int(np.floor((lat + 90.) / dlat))
+        hist[lat_index, lon_index] += 1
 
     lat_grid += dlat / 2.
     lon_grid += dlon / 2.
@@ -130,7 +130,7 @@ def plot_distribution(ax, lon_samples, lat_samples, to_plot='d', resolution=30, 
 
 def plot_continent( ax, name, rotation_pole=None, angle=0.,  **kwargs):
     # Load the lat/lon file
-    datastream = pkgutil.get_data('mcplates', 'data/continents/' + continent_dictionary[name]) 
+    datastream = pkgutil.get_data('mcplates', 'data/continents/' + continent_dictionary[name])
     datalines = [line.strip()
                  for line in datastream.decode('ascii').split('\n') if line.strip()]
 
