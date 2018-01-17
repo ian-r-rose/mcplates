@@ -31,7 +31,7 @@ class APWPath(object):
 
         def pole_position(start, age, tpw_pole_angle, tpw_rate, *args):
             if len(args) != max( (n_euler_poles * 3 - 1), 0):
-                raise Exception("Unexpected number of euler poles/changpoints: expected %i, got %i"%(n_euler_poles*3-1, len(args)))
+                raise Exception("Unexpected number of euler poles/changepoints: expected %i, got %i"%(n_euler_poles*3-1, len(args)))
 
             # Parse the variable length arguments into euler poles and
             # changepoints
